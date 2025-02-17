@@ -38,5 +38,5 @@ python backend/main.py
 5. Open your browser and navigate to `http://localhost:5173` to view the application.
 
 
-5. To use the application, you need to have LM Studio running (setup the url for that), and the API key for OpenAI.
+### To use the application, you need to have LM Studio running (setup the url for that), and the API key for OpenAI.
 
