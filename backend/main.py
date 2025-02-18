@@ -6,6 +6,10 @@ import requests
 import os
 from dotenv import load_dotenv
 from typing import Optional
+from prompts import EDUCATIONAL_PROMPTS, CURRICULUM_PROMPT, PROFESSOR_PROMPTS
+from fastapi.responses import StreamingResponse
+import io
+
 
 load_dotenv()
 
@@ -41,6 +45,40 @@ class ChatRequest(BaseModel):
     professor: Professor
     
 # Initialize OpenAI client
+
+class GenerateResponseRequest(BaseModel):
+    mode :str
+    grade : str
+    subject : str
+    language : str
+    userInput : str
+    teachingStyle: list[str]
+
+
+class GenerateCirriculumRequest(BaseModel):
+    grade : str
+    subject : str
+    language: str
+    durationUnit : str
+    durationValue : int
+
+
+class CurriculumPDF(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, 'Curriculum PDF', ln=True, align='C')
+
+    def chapter_title(self, title):
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, title, 0, 1, 'C')
+    
+    def chapter_body(self, body):
+        self.set_font('Arial', '', 12)
+        self.multi_cell(0, 10, body)
+    
+# Initialize OpenAI client
+api_key=os.getenv("OPENAI_API_KEY")
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # LM Studio typically runs on localhost:1234
@@ -132,6 +170,91 @@ async def chat(request: ChatRequest):
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+@app.post("/api/generateResponse")
+async def generateResponse(request: GenerateResponseRequest):
+    
+    prompt = EDUCATIONAL_PROMPTS[request.mode].format(
+        grade=request.grade,
+        subject=request.subject,
+        topic=request.userInput,
+        language=request.language,
+        teaching_style=", ".join(request.teachingStyle)  # Convert list to a string
+    )
+
+    
+    response = client.chat.completions.create(
+    model="gpt-4o-mini",  # Changed model to gpt-4o-mini
+    messages=[
+        {
+            "role": "system",
+            "content": f"You are an expert educator. Use the {request.teachingStyle} approach to explain {request.subject} at the {request.grade} level in {request.language}."
+        },
+        {"role": "user", "content": prompt}  # Use the formatted prompt
+        ]
+    )
+    return {"response": response.choices[0].message.content}
+
+
+@app.post("/api/generateCirriculum")
+def generate_curriculum_pdf(request: GenerateCirriculumRequest):
+    pdf = CurriculumPDF()
+    pdf.add_page()
+    
+    print("API hit")
+
+    prompt = CURRICULUM_PROMPT.format(
+        language=request.language,
+        grade=request.grade,
+        subject=request.subject,
+        duration_value=request.durationValue,
+        duration_unit=request.durationUnit
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",  
+        messages=[
+            {
+                "role": "system",
+                "content": f"You are an expert educator. Explain {request.subject} at the {request.grade} level in {request.language}. Create a comprehensive, structured, and detailed curriculum for the course."
+            },
+            {
+                "role": "user",
+                "content": prompt  
+            }
+        ]
+    )
+
+    curriculum_content = response.choices[0].message.content
+
+    print(curriculum_content)
+    
+    # Add the curriculum content to the PDF
+    pdf.chapter_title(f"Curriculum for {request.subject} ({request.grade} Level) in {request.language}")
+    pdf.chapter_body(curriculum_content)
+
+    # Define the output directory and filename
+    output_dir = 'generated_pdfs'  # Directory where the PDFs will be stored
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)  # Create the directory if it doesn't exist
+
+    filename = os.path.join(output_dir, f"curriculum_{request.subject}_{request.grade}.pdf")  # Filename based on subject and grade
+
+    # Save the PDF to a file in the output directory
+    pdf.output(filename)
+
+    print(f"PDF saved as {filename}")
+
+    return {"message": "PDF generated and saved successfully", "file_path": filename}
+
+    # Return the PDF as a streaming response
+    #return StreamingResponse(
+    #    pdf_buffer,
+    #    media_type="application/pdf",
+    #    headers={"Content-Disposition": f"attachment; filename=curriculum_{request.subject}_{request.grade}.pdf"}
+    #)
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,0 +1,7 @@
+openai
+fastapi
+pydantic
+requests
+python-dotenv
+uvicorn
+fpdf2
