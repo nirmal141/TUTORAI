@@ -23,7 +23,7 @@
         "@tremor/react": "^3.18.7",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
-        "framer-motion": "^12.4.3",
+        "framer-motion": "^12.4.4",
         "lucide-react": "^0.344.0",
         "openai": "^4.28.0",
         "react": "^18.3.1",

@@ -6,6 +6,8 @@ import requests
 import os
 from dotenv import load_dotenv
 from typing import Optional
+from bs4 import BeautifulSoup
+from duckduckgo_search import DDGS
 
 load_dotenv()
 
@@ -39,6 +41,7 @@ class ChatRequest(BaseModel):
     message: str
     model_type: str
     professor: Professor
+    enable_search: bool = False  # New field to toggle web search
     
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -49,19 +52,98 @@ LM_STUDIO_HEADERS = {
     "Content-Type": "application/json"
 }
 
+async def get_web_search_results(query: str, professor: dict, num_results: int = 5):
+    try:
+        ddgs = DDGS()
+        
+        # Create specialized search queries based on professor's field and name
+        academic_queries = [
+            f"{professor['name']} {professor['field']} {query}",  # Professor-specific search
+            f"{query} {professor['field']} research papers",      # Field-specific papers
+            f"{professor['name']} github {professor['field']}",   # GitHub/code repositories
+            f"{professor['name']} academic publications",         # Academic publications
+            f"{query} {professor['field']} educational resources" # General field resources
+        ]
+        
+        all_results = []
+        formatted_results = []
+        search_context = "Relevant academic and research sources:\n\n"
+        
+        # Perform multiple targeted searches
+        for specialized_query in academic_queries:
+            results = list(ddgs.text(specialized_query, max_results=3))
+            all_results.extend(results)
+            
+        # Prioritize and deduplicate results
+        seen_links = set()
+        
+        for result in all_results:
+            link = result.get('href', '')
+            if not link or link in seen_links:
+                continue
+                
+            seen_links.add(link)
+            
+            # Prioritize academic and research sources
+            priority_domains = [
+                'scholar.google.com', 'researchgate.net', 'academia.edu',
+                'github.com', 'arxiv.org', 'ieee.org', 'acm.org',
+                'springer.com', 'sciencedirect.com'
+            ]
+            
+            # Check if the result is from a priority domain
+            is_priority = any(domain in link.lower() for domain in priority_domains)
+            
+            formatted_result = {
+                "title": result.get('title', 'No title').strip(),
+                "link": link,
+                "summary": result.get('body', 'No summary available').strip(),
+                "is_academic": is_priority
+            }
+            
+            formatted_results.append(formatted_result)
+            
+            # Add context with academic source highlighting
+            search_context += f"{len(formatted_results)}. {formatted_result['title']}\n"
+            search_context += f"Source: {formatted_result['link']}\n"
+            if is_priority:
+                search_context += "[Academic/Research Source]\n"
+            search_context += f"Summary: {formatted_result['summary']}\n\n"
+            
+            # Limit to top results
+            if len(formatted_results) >= num_results:
+                break
+        
+        print("Formatted academic search results:", formatted_results)
+        return search_context, formatted_results
+    except Exception as e:
+        print(f"Search error: {str(e)}")
+        return "", []
+
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
-    print(f"Received request with model_type: {request.model_type}")
-    
     try:
+        # Construct base system message
+        system_message = f"You are Professor {request.professor.name}, an expert educator in {request.professor.field}..."
+        
+        # If web search is enabled, perform specialized academic search
+        search_context = ""
+        search_results = []
+        if request.enable_search:
+            search_context, search_results = await get_web_search_results(
+                query=request.message,
+                professor={
+                    "name": request.professor.name,
+                    "field": request.professor.field
+                }
+            )
+            if search_context:
+                system_message += "\n\nHere are relevant academic and research sources:\n" + search_context
+                system_message += "\nPlease incorporate these academic sources into your response when relevant."
+        
         if request.model_type == "local":
             try:
                 print("Attempting LM Studio request...")
-                
-                # Create system message
-                system_message = f"You are {request.professor.name}, "
-                system_message += f"an expert in {request.professor.field}. "
-                system_message += f"Teaching mode: {request.professor.teachingMode}"
                 
                 payload = {
                     "messages": [
@@ -107,24 +189,28 @@ async def chat(request: ChatRequest):
                 
         elif request.model_type == "openai":
             try:
-                # Create system message with proper error handling
-                system_message = f"You are {request.professor.name}, "
-                system_message += f"an expert in {request.professor.field}. "
-                system_message += f"Teaching mode: {request.professor.teachingMode}"
-
-                print(f"System message: {system_message}")  # Debug log
-
+                messages = [
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": request.message}
+                ]
+                
+                # If we have search context, add it as a system message
+                if search_context:
+                    messages.insert(1, {
+                        "role": "system",
+                        "content": "Please use the web search results above to enhance your response, but maintain your role as an educator."
+                    })
+                
                 response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": system_message
-                        },
-                        {"role": "user", "content": request.message}
-                    ]
+                    model="gpt-4o-mini",
+                    messages=messages,
+                    temperature=0.85
                 )
-                return {"response": response.choices[0].message.content}
+                
+                return {
+                    "response": response.choices[0].message.content,
+                    "search_results": search_results if search_results else None
+                }
             except Exception as e:
                 print(f"OpenAI error: {str(e)}")
                 raise HTTPException(status_code=500, detail=f"OpenAI error: {str(e)}")

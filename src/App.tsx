@@ -9,6 +9,7 @@ import SettingsPage from './pages/SettingsPage';
 import { useState } from 'react';
 import { SelectedProfessor } from './components/Chat';
 import { NextUIProvider } from '@nextui-org/react';
+import ProfessorDashboard from './components/ProfessorDashboard';
 
 function App() {
   const [selectedProfessor, setSelectedProfessor] = useState<SelectedProfessor | null>(null);
@@ -26,6 +27,7 @@ function App() {
                 <Route path="/professors" element={<ProfessorsPage />} />
                 <Route path="/models" element={<ModelsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/professor-dashboard" element={<ProfessorDashboard />} />
               </Routes>
             </div>
             <div className="border-t">

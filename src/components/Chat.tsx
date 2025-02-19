@@ -1,14 +1,26 @@
 // chat.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, Loader2, Trash2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, Trash2, Search, Globe, Database } from 'lucide-react';
 import ReactMarkdown from 'react-markdown'; // <-- Import react-markdown
 import { useChatHistory } from '../hooks/useChatHistory';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Switch } from '@headlessui/react';
 
-export interface Message {
+// Add interface for search source
+interface SearchSource {
+  title: string;
+  link: string;
+  summary: string;
+  is_academic?: boolean;  // New field to identify academic sources
+}
+
+// Update Message interface
+interface Message {
   id: number;
-  type: 'user' | 'bot';
-  content: string;   // This content can contain Markdown
+  type: 'user' | 'bot' | 'search';
+  content: string;
   timestamp: Date;
+  sources?: SearchSource[];
 }
 
 export interface ChatHistory {
@@ -28,9 +40,26 @@ export interface SelectedProfessor {
 
 interface ChatProps {
   selectedProfessor: SelectedProfessor | null;
+  initialPrompt?: string;
 }
 
-export default function Chat({ selectedProfessor }: ChatProps) {
+// Type-safe URL helper function
+const getDomainFromUrl = (urlString: string): string => {
+  try {
+    const url = new URL(urlString.startsWith('http') ? urlString : `https://${urlString}`);
+    return url.hostname.replace('www.', '');
+  } catch {
+    return 'source';
+  }
+};
+
+// Add this interface for search states
+interface SearchState {
+  status: 'searching' | 'found' | 'error' | null;
+  query: string;
+}
+
+export default function Chat({ selectedProfessor, initialPrompt }: ChatProps) {
   const {
     chatHistories,
     saveNewChat,
@@ -42,18 +71,19 @@ export default function Chat({ selectedProfessor }: ChatProps) {
   const initialBotMessage: Message = {
     id: 1,
     type: 'bot',
-    content: `Welcome to class! I'm Professor ${selectedProfessor?.name || 'Assistant'}, 
-and I'll be your instructor in ${selectedProfessor?.field || 'General Studies'}. 
-${selectedProfessor?.teachingMode === 'Socratic' 
+    content: selectedProfessor ? `Welcome to class! I'm Professor ${selectedProfessor.name}, 
+and I'll be your instructor in ${selectedProfessor.field}. 
+${selectedProfessor.teachingMode === 'Socratic' 
   ? "I believe in learning through questioning and discussion."
-  : selectedProfessor?.teachingMode === 'Practical' 
+  : selectedProfessor.teachingMode === 'Practical' 
     ? "I focus on practical, hands-on learning approaches."
     : "I'm here to guide you through your learning journey."
 }
 
-Feel free to ask me any questions about ${selectedProfessor?.field || 'the subject'}, 
-whether it's about course content, research guidance, or ${selectedProfessor?.adviceType} advice. 
-Let's make this a productive learning session!`,
+Feel free to ask me any questions about ${selectedProfessor.field}, 
+whether it's about course content, research guidance, or ${selectedProfessor.adviceType} advice. 
+Let's make this a productive learning session!`
+: "Welcome! I'm your AI Assistant. How can I help you today?",
     timestamp: new Date(),
   };
 
@@ -71,6 +101,77 @@ Let's make this a productive learning session!`,
   ]);
   const [currentLoadingState, setCurrentLoadingState] = useState(0);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [enableWebSearch, setEnableWebSearch] = useState(false);
+
+  // Add a ref to track if initial generation has happened
+  const initialGenerationDone = useRef(false);
+
+  // Move the state inside the component
+  const [expandedSearchId, setExpandedSearchId] = useState<number | null>(null);
+  const [searchState, setSearchState] = useState<SearchState>({ status: null, query: '' });
+  const [searchAnimation, setSearchAnimation] = useState(0);
+
+  // Define handleInitialGeneration
+  const handleInitialGeneration = async () => {
+    if (!initialPrompt || isGenerating) return;
+    
+    setIsGenerating(true);
+    setShowConversationModal(true);
+
+    try {
+      const response = await fetch('http://localhost:8000/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: initialPrompt,
+          model_type: selectedProfessor?.modelType || 'openai',
+          professor: {
+            name: selectedProfessor?.name || 'AI Educator',
+            field: selectedProfessor?.field || 'General Knowledge',
+            teachingMode: selectedProfessor?.teachingMode || 'Helpful',
+            adviceType: 'educational'
+          }
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'An error occurred');
+      }
+
+      const botMessage: Message = {
+        id: messages.length + 1,
+        type: 'bot',
+        content: data.response,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, botMessage]);
+      
+    } catch (error) {
+      console.error('Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      const botErrorMessage: Message = {
+        id: messages.length + 1,
+        type: 'bot',
+        content: `Error: ${errorMessage}`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, botErrorMessage]);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Modify the useEffect for initial prompt
+  useEffect(() => {
+    if (initialPrompt && !initialGenerationDone.current) {
+      initialGenerationDone.current = true;  // Mark as done
+      handleInitialGeneration();
+    }
+  }, [initialPrompt]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -92,6 +193,16 @@ Let's make this a productive learning session!`,
     }
   }, [messages]);
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (searchState.status === 'searching') {
+      interval = setInterval(() => {
+        setSearchAnimation((prev) => (prev + 1) % 3);
+      }, 500);
+    }
+    return () => clearInterval(interval);
+  }, [searchState.status]);
+
   const handleClearChat = () => {
     setMessages([{ ...initialBotMessage, timestamp: new Date() }]);
     setInput('');
@@ -106,72 +217,72 @@ Let's make this a productive learning session!`,
     setShowConversationModal(true);
   };
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent, customMessage?: string) => {
     e.preventDefault();
-    if (!input.trim() || isGenerating) return;
+    if ((!input.trim() && !customMessage) || isGenerating) return;
 
+    const messageToSend = customMessage || input;
     setIsGenerating(true);
     setShowConversationModal(true);
-    
+
+    // Add user message
     const userMessage: Message = {
       id: messages.length + 1,
       type: 'user',
-      content: input,
+      content: messageToSend,
       timestamp: new Date(),
     };
-    
     setMessages(prev => [...prev, userMessage]);
     setInput('');
 
     try {
-      console.log('Sending request with model type:', selectedProfessor?.modelType);
-      
-      // Enhanced context and role-specific prompting
-      const professorContext = {
-        name: selectedProfessor?.name || 'Assistant',
-        field: selectedProfessor?.field || 'General Knowledge',
-        teachingMode: selectedProfessor?.teachingMode || 'Helpful',
-        adviceType: selectedProfessor?.adviceType || 'General',
-        rolePrompt: `You are Professor ${selectedProfessor?.name}, an experienced educator in ${selectedProfessor?.field}. 
-          Your teaching style is ${selectedProfessor?.teachingMode}, and you specialize in providing ${selectedProfessor?.adviceType} advice. 
-          Interact as if you're in a classroom setting, using appropriate academic language and examples from your field. 
-          Feel free to reference academic concepts, research, and real-world applications in your responses. 
-          If a student needs guidance, provide it from your perspective as an experienced educator in ${selectedProfessor?.field}.
-          Maintain a professional yet approachable demeanor, encouraging critical thinking and deeper understanding.`
-      };
+      // Always show searching animation when web search is enabled
+      if (enableWebSearch) {
+        setSearchState({ status: 'searching', query: messageToSend });
+      }
 
       const response = await fetch('http://localhost:8000/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: input,
+          message: messageToSend,
           model_type: selectedProfessor?.modelType || 'openai',
-          professor: professorContext
+          professor: selectedProfessor,
+          enable_search: enableWebSearch
         }),
       });
 
+      if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
-      
-      if (!response.ok) {
-        console.error('Error response:', data);
-        throw new Error(data.detail || 'An error occurred');
+
+      // Handle search results if present
+      if (enableWebSearch && data.search_results && data.search_results.length > 0) {
+        setSearchState({ status: 'found', query: messageToSend });
+        const searchMessage: Message = {
+          id: messages.length + 2,
+          type: 'search',
+          content: 'Search Results:',
+          timestamp: new Date(),
+          sources: data.search_results
+        };
+        setMessages(prev => [...prev, searchMessage]);
       }
 
+      // Format bot response with markdown
       const botMessage: Message = {
-        id: messages.length + 2,
+        id: messages.length + (enableWebSearch ? 3 : 2),
         type: 'bot',
         content: data.response,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, botMessage]);
-      
+
     } catch (error) {
+      setSearchState({ status: 'error', query: messageToSend });
       console.error('Error details:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       const botErrorMessage: Message = {
-        id: messages.length + 2,
+        id: messages.length + (enableWebSearch ? 3 : 2),
         type: 'bot',
         content: selectedProfessor?.modelType === 'local' 
           ? `LM Studio Error: ${errorMessage}. Please ensure LM Studio is running and a model is loaded.`
@@ -181,8 +292,54 @@ Let's make this a productive learning session!`,
       setMessages(prev => [...prev, botErrorMessage]);
     } finally {
       setIsGenerating(false);
+      // Reset search state after delay
+      setTimeout(() => {
+        setSearchState({ status: null, query: '' });
+      }, 2000);
     }
   };
+
+  // Add this search animation component
+  const SearchingAnimation = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="flex items-center space-x-2 text-cyan-400"
+    >
+      <Globe className="h-4 w-4 animate-spin" />
+      <span className="text-sm">
+        Searching the web
+        <span className="inline-block w-8">
+          {'.'.repeat(searchAnimation + 1)}
+        </span>
+      </span>
+    </motion.div>
+  );
+
+  // Add the web search toggle component
+  const WebSearchToggle = () => (
+    <div className=" items-center space-x-2 px-4 py-2">
+      <Switch
+        checked={enableWebSearch}
+        onChange={setEnableWebSearch}
+        className={`${
+          enableWebSearch ? 'bg-cyan-600' : 'bg-zinc-700'
+        } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2`}
+      >
+        <span className="sr-only">Enable web search</span>
+        <span
+          className={`${
+            enableWebSearch ? 'translate-x-6' : 'translate-x-1'
+          } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+        />
+      </Switch>
+      <span className="text-sm text-cyan-300">
+        Web Search {enableWebSearch ? 'Enabled' : 'Disabled'}
+      </span>
+      <Globe className={`h-4 w-4 ${enableWebSearch ? 'text-cyan-400' : 'text-zinc-500'}`} />
+    </div>
+  );
 
   return (
     <div className="relative">
@@ -204,6 +361,9 @@ Let's make this a productive learning session!`,
             </svg>
             <span className="text-sm font-medium">History</span>
           </button>
+          <div className=" items-center space-x-2">
+            <WebSearchToggle />
+          </div>
         </div>
         <form onSubmit={handleSend} className="mt-4 flex">
           <input
@@ -262,48 +422,217 @@ Let's make this a productive learning session!`,
             {messages.map(message => (
               <div
                 key={message.id}
-                className={`flex items-start gap-4 mb-6 ${message.type === 'user' ? 'flex-row-reverse' : ''}`}
+                className={`flex items-start gap-4 mb-6 ${
+                  message.type === 'user' ? 'flex-row-reverse' : ''
+                }`}
               >
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                     message.type === 'user' 
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-black' 
-                      : 'bg-zinc-800 text-orange-400 border border-orange-500/20'
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-black'
+                      : message.type === 'search'
+                        ? 'bg-gradient-to-r from-blue-600 to-cyan-400 text-white'
+                        : 'bg-gradient-to-r from-zinc-800 to-zinc-700 text-orange-400 border border-orange-500/20'
                   }`}
                 >
-                  {message.type === 'user' ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
+                  {message.type === 'user' ? (
+                    <User className="h-5 w-5" />
+                  ) : message.type === 'search' ? (
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  ) : (
+                    <Bot className="h-5 w-5" />
+                  )}
                 </div>
                 <div className={`max-w-[80%] ${message.type === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div
-                    className={`p-4 rounded-2xl ${
-                      message.type === 'user'
-                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-black'
-                        : 'bg-zinc-900 text-orange-200 border border-orange-500/20'
+                  <div 
+                    className={`p-4 rounded-2xl backdrop-blur-sm ${
+                      message.type === 'search' 
+                        ? 'bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-cyan-500/30 shadow-lg shadow-cyan-500/10'
+                        : message.type === 'user'
+                          ? 'bg-gradient-to-br from-zinc-900 to-zinc-800 text-white border border-orange-500/20 shadow-lg shadow-orange-500/5'
+                          : 'bg-gradient-to-br from-zinc-900 to-zinc-800 text-white border border-orange-500/20 shadow-lg shadow-orange-500/5'
                     }`}
                   >
-                    <ReactMarkdown
-                      className={`prose prose-sm max-w-none ${
-                        message.type === 'user' ? 'prose-invert' : 'prose-orange'
-                      }`}
-                      components={{
-                        p: ({ node, ...props }) => <p className="mb-2 leading-relaxed" {...props} />,
-                        ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
-                        ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
-                        li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-                        h2: ({ node, ...props }) => <h2 className="text-lg font-bold mb-2 mt-4" {...props} />,
-                        h3: ({ node, ...props }) => <h3 className="text-md font-semibold mb-2 mt-3" {...props} />,
-                        code: ({ node, inline, ...props }) => (
-                          inline 
-                            ? <code className="bg-zinc-800 px-1 rounded text-orange-200" {...props} />
-                            : <code className="block bg-zinc-800 p-2 rounded my-2 text-orange-200" {...props} />
-                        ),
-                        blockquote: ({ node, ...props }) => (
-                          <blockquote className="border-l-4 border-orange-500 pl-4 italic my-2" {...props} />
-                        ),
-                      }}
-                    >
-                      {message.content}
-                    </ReactMarkdown>
+                    {message.type === 'search' ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="w-full"
+                      >
+                        <div 
+                          className="flex items-center justify-between mb-3 cursor-pointer"
+                          onClick={() => setExpandedSearchId(expandedSearchId === message.id ? null : message.id)}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <Search className="h-5 w-5 text-cyan-400" />
+                            <h3 className="text-lg font-semibold text-cyan-300">
+                              Academic & Research Sources ({message.sources?.filter(s => s.is_academic).length || 0})
+                            </h3>
+                          </div>
+                          <motion.div
+                            animate={{ rotate: expandedSearchId === message.id ? 180 : 0 }}
+                            className="text-cyan-400"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </motion.div>
+                        </div>
+
+                        {/* Compact View */}
+                        {expandedSearchId !== message.id && (
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex flex-wrap gap-2"
+                          >
+                            {message.sources?.map((source, index) => (
+                              <motion.div
+                                key={index}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className={`px-3 py-1.5 rounded-full ${
+                                  source.is_academic 
+                                    ? 'bg-blue-900/40 border-blue-500/20 text-blue-300' 
+                                    : 'bg-cyan-900/40 border-cyan-500/20 text-cyan-300'
+                                } border text-sm flex items-center space-x-2 hover:bg-opacity-60 transition-colors cursor-pointer`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(source.link, '_blank');
+                                }}
+                              >
+                                {source.is_academic ? (
+                                  <Database className="h-3.5 w-3.5" />
+                                ) : (
+                                  <Globe className="h-3.5 w-3.5" />
+                                )}
+                                <span>{getDomainFromUrl(source.link)}</span>
+                              </motion.div>
+                            ))}
+                          </motion.div>
+                        )}
+
+                        {/* Expanded View with academic highlighting */}
+                        <AnimatePresence>
+                          {expandedSearchId === message.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="space-y-3 mt-3 overflow-hidden"
+                            >
+                              {/* Academic sources first */}
+                              {message.sources?.filter(s => s.is_academic).map((source, index) => (
+                                <motion.div
+                                  key={`academic-${index}`}
+                                  initial={{ opacity: 0, x: -20 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: index * 0.1 }}
+                                  className="p-4 rounded-lg bg-blue-950/50 border border-blue-500/20 
+                                           hover:border-blue-500/40 transition-all"
+                                >
+                                  <a
+                                    href={source.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block group"
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <h4 className="text-cyan-300 font-medium group-hover:text-cyan-200 
+                                                   transition-colors flex-1">
+                                        {source.title}
+                                      </h4>
+                                      <span className="text-xs text-cyan-400 px-2 py-1 bg-cyan-950/50 
+                                                     rounded-full ml-2">
+                                        {getDomainFromUrl(source.link)}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-cyan-200/70 mt-2 line-clamp-2 
+                                              group-hover:text-cyan-200/90 transition-colors">
+                                      {source.summary}
+                                    </p>
+                                    <motion.div 
+                                      className="flex items-center justify-between mt-3"
+                                      whileHover={{ scale: 1.02 }}
+                                    >
+                                      <div className="flex items-center text-xs text-cyan-400 
+                                                   group-hover:text-cyan-300">
+                                        <Database className="h-4 w-4 mr-1" />
+                                        View Source
+                                      </div>
+                                      <span className="text-xs text-cyan-400/60">
+                                        Educational Resource
+                                      </span>
+                                    </motion.div>
+                                  </a>
+                                </motion.div>
+                              ))}
+                              
+                              {/* Other sources */}
+                              {message.sources?.filter(s => !s.is_academic).map((source, index) => (
+                                <motion.div
+                                  key={`other-${index}`}
+                                  initial={{ opacity: 0, x: -20 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: index * 0.1 }}
+                                  className="p-4 rounded-lg bg-cyan-950/50 border border-cyan-500/20 
+                                           hover:border-cyan-500/40 transition-all"
+                                >
+                                  <a
+                                    href={source.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block group"
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <h4 className="text-cyan-300 font-medium group-hover:text-cyan-200 
+                                                   transition-colors flex-1">
+                                        {source.title}
+                                      </h4>
+                                      <span className="text-xs text-cyan-400 px-2 py-1 bg-cyan-950/50 
+                                                     rounded-full ml-2">
+                                        {getDomainFromUrl(source.link)}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-cyan-200/70 mt-2 line-clamp-2 
+                                              group-hover:text-cyan-200/90 transition-colors">
+                                      {source.summary}
+                                    </p>
+                                    <motion.div 
+                                      className="flex items-center justify-between mt-3"
+                                      whileHover={{ scale: 1.02 }}
+                                    >
+                                      <div className="flex items-center text-xs text-cyan-400 
+                                                   group-hover:text-cyan-300">
+                                        <Database className="h-4 w-4 mr-1" />
+                                        View Source
+                                      </div>
+                                      <span className="text-xs text-cyan-400/60">
+                                        Educational Resource
+                                      </span>
+                                    </motion.div>
+                                  </a>
+                                </motion.div>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    ) : (
+                      <ReactMarkdown 
+                        className={`prose prose-invert max-w-none
+                          prose-p:text-white prose-headings:text-white
+                          prose-strong:text-white prose-em:text-white/90
+                          prose-code:text-white/90 prose-pre:bg-black/20
+                          prose-a:text-white prose-a:underline hover:prose-a:text-white/90
+                          prose-li:text-white`}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    )}
                   </div>
                   <span className="text-xs text-orange-200/40 mt-2 block">
                     {message.timestamp.toLocaleTimeString()}
@@ -313,18 +642,35 @@ Let's make this a productive learning session!`,
             ))}
             {isGenerating && (
               <div className="flex items-start gap-4 mb-6">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-zinc-800 text-orange-400 border border-orange-500/20">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-r from-zinc-800 to-zinc-700 text-orange-400 border border-orange-500/20">
                   <Bot className="h-5 w-5" />
                 </div>
                 <div className="max-w-[80%] items-start">
-                  <div className="p-4 rounded-2xl bg-zinc-900 border border-orange-500/20">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white border border-orange-500/20 shadow-lg shadow-orange-500/5">
                     <div className="flex items-center space-x-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-orange-400" />
-                      <span className="text-sm text-orange-200/80">{loadingStates[currentLoadingState]}</span>
+                      <Loader2 className="h-4 w-4 animate-spin text-white" />
+                      <span className="text-sm text-white">{loadingStates[currentLoadingState]}</span>
                     </div>
                   </div>
                 </div>
               </div>
+            )}
+            {searchState.status === 'searching' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="flex items-start gap-4 mb-6"
+              >
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-r from-cyan-600 to-blue-600 text-white">
+                  <Globe className="h-5 w-5 animate-spin" />
+                </div>
+                <div className="max-w-[80%] items-start">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-900/90 to-blue-900/90 border border-cyan-500/30">
+                    <SearchingAnimation />
+                  </div>
+                </div>
+              </motion.div>
             )}
             <div ref={messagesEndRef} />
           </div>

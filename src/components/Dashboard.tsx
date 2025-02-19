@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from 'react-router-dom';
 
 
 interface DashboardProps {
@@ -15,6 +16,9 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onSelectProfessor }: DashboardProps) {
+  const navigate = useNavigate();
+  const [activeView, setActiveView] = useState('student');
+
   const stats = [
     { 
       icon: Rocket, 
@@ -142,6 +146,28 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
             Experience personalized learning with our advanced AI professors
           </p>
         </motion.div>
+
+        {/* Add this at the top of your dashboard */}
+        <div className="mb-6 flex space-x-2">
+          <Button
+            className={`${activeView === 'student' ? 'bg-orange-500 text-white' : ''}`}
+            onClick={() => {
+              setActiveView('student');
+              navigate('/');
+            }}
+          >
+            Student Dashboard
+          </Button>
+          <Button
+            className={`${activeView === 'professor' ? 'bg-orange-500 text-white' : ''}`}
+            onClick={() => {
+              setActiveView('professor');
+              navigate('/professor-dashboard');
+            }}
+          >
+            Professor Dashboard
+          </Button>
+        </div>
 
         {/* Enhanced Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
