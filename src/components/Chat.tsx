@@ -1,6 +1,6 @@
 // chat.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, Loader2, Trash2, Search, Globe, Database } from 'lucide-react';
+import { Send, Bot, User, Loader2, Trash2, Globe, Upload, FileText, Youtube } from 'lucide-react';
 import ReactMarkdown from 'react-markdown'; // <-- Import react-markdown
 import { useChatHistory } from '../hooks/useChatHistory';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -59,6 +59,163 @@ interface SearchState {
   query: string;
 }
 
+// Enhanced animation variants
+const messageAnimationVariants = {
+  hidden: { 
+    opacity: 0, 
+    y: 20,
+    scale: 0.95
+  },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    scale: 1,
+    transition: { 
+      duration: 0.4, 
+      ease: [0.4, 0, 0.2, 1] // Improved easing
+    }
+  },
+  hover: {
+    scale: 1.01,
+    transition: {
+      duration: 0.2,
+      ease: "easeOut"
+    }
+  }
+};
+
+// Add new loading animation variant
+const loadingVariants = {
+  animate: {
+    opacity: [0.4, 1, 0.4],
+    transition: {
+      duration: 1.5,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }
+  }
+};
+
+// Add this component at the top level of your file
+export const SourcesBox = ({ sources }: { sources: SearchSource[] }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-4 bg-zinc-900/90 border border-blue-500/20 rounded-lg overflow-hidden"
+    >
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-3 hover:bg-zinc-800/50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Globe className="h-4 w-4 text-blue-400" />
+          <span className="text-blue-400 text-sm font-medium">
+            {sources.length} Academic Sources Found
+          </span>
+        </div>
+        <motion.div
+          animate={{ rotate: isExpanded ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <svg
+            className="w-4 h-4 text-blue-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </motion.div>
+      </button>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="p-3 space-y-2 border-t border-blue-500/20">
+              {sources.map((source, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="group"
+                >
+                  <a
+                    href={source.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-3 p-2 rounded-lg hover:bg-zinc-800/50 transition-all"
+                  >
+                    <div className="flex-shrink-0 mt-1">
+                      {source.is_academic ? (
+                        <svg
+                          className="w-4 h-4 text-blue-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-4 h-4 text-zinc-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-blue-400 group-hover:text-blue-300 truncate">
+                        {source.title}
+                      </p>
+                      <p className="text-xs text-zinc-500 truncate">
+                        {getDomainFromUrl(source.link)}
+                      </p>
+                    </div>
+                  </a>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+// Add new interfaces
+interface UploadResponse {
+  document_id: string;
+  message: string;
+}
+
 export default function Chat({ selectedProfessor, initialPrompt }: ChatProps) {
   const {
     chatHistories,
@@ -102,14 +259,17 @@ Let's make this a productive learning session!`
   const [currentLoadingState, setCurrentLoadingState] = useState(0);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [enableWebSearch, setEnableWebSearch] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const youtubeInputRef = useRef<HTMLInputElement>(null);
 
   // Add a ref to track if initial generation has happened
   const initialGenerationDone = useRef(false);
 
   // Move the state inside the component
-  const [expandedSearchId, setExpandedSearchId] = useState<number | null>(null);
   const [searchState, setSearchState] = useState<SearchState>({ status: null, query: '' });
-  const [searchAnimation, setSearchAnimation] = useState(0);
 
   // Define handleInitialGeneration
   const handleInitialGeneration = async () => {
@@ -197,7 +357,7 @@ Let's make this a productive learning session!`
     let interval: NodeJS.Timeout;
     if (searchState.status === 'searching') {
       interval = setInterval(() => {
-        setSearchAnimation((prev) => (prev + 1) % 3);
+        SearchingAnimation();
       }, 500);
     }
     return () => clearInterval(interval);
@@ -217,6 +377,105 @@ Let's make this a productive learning session!`
     setShowConversationModal(true);
   };
 
+  // Add file upload handlers
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingFile(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('http://localhost:8000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data: UploadResponse = await response.json();
+      setCurrentDocumentId(data.document_id);
+      
+      // Add system message about uploaded document
+      const uploadMessage: Message = {
+        id: messages.length + 1,
+        type: 'bot',
+        content: `I've received your document "${file.name}". Feel free to ask me questions about its content.`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, uploadMessage]);
+      setShowUploadModal(false);
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      const errorMessage: Message = {
+        id: messages.length + 1,
+        type: 'bot',
+        content: 'Sorry, there was an error uploading your document.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setUploadingFile(false); // Ensure this is called in finally block
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleYoutubeUpload = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const youtubeUrl = youtubeInputRef.current?.value;
+    if (!youtubeUrl) return;
+
+    try {
+      setUploadingFile(true);
+      const response = await fetch('http://localhost:8000/api/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ youtube_url: youtubeUrl }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data: UploadResponse = await response.json();
+      setCurrentDocumentId(data.document_id);
+      
+      // Add system message about uploaded video
+      const uploadMessage: Message = {
+        id: messages.length + 1,
+        type: 'bot',
+        content: `I've processed the YouTube video. Feel free to ask me questions about its content.`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, uploadMessage]);
+      setShowUploadModal(false);
+
+    } catch (error) {
+      console.error('YouTube processing error:', error);
+      const errorMessage: Message = {
+        id: messages.length + 1,
+        type: 'bot',
+        content: 'Sorry, there was an error processing the YouTube video.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setUploadingFile(false); // Ensure this is called in finally block
+      if (youtubeInputRef.current) {
+        youtubeInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Update handleSend to include document context
   const handleSend = async (e: React.FormEvent, customMessage?: string) => {
     e.preventDefault();
     if ((!input.trim() && !customMessage) || isGenerating) return;
@@ -236,7 +495,6 @@ Let's make this a productive learning session!`
     setInput('');
 
     try {
-      // Always show searching animation when web search is enabled
       if (enableWebSearch) {
         setSearchState({ status: 'searching', query: messageToSend });
       }
@@ -248,7 +506,9 @@ Let's make this a productive learning session!`
           message: messageToSend,
           model_type: selectedProfessor?.modelType || 'openai',
           professor: selectedProfessor,
-          enable_search: enableWebSearch
+          enable_search: enableWebSearch,
+          document_id: currentDocumentId, // Add document context
+          structured_response: true
         }),
       });
 
@@ -268,11 +528,20 @@ Let's make this a productive learning session!`
         setMessages(prev => [...prev, searchMessage]);
       }
 
-      // Format bot response with markdown
+      // Format the response with source citations if available
+      let formattedResponse = data.response;
+      if (data.citations) {
+        formattedResponse = `${data.response}\n\n---\n\n**Sources Used:**\n${
+          data.citations.map((citation: string, index: number) => 
+            `${index + 1}. ${citation}`
+          ).join('\n')
+        }`;
+      }
+
       const botMessage: Message = {
         id: messages.length + (enableWebSearch ? 3 : 2),
         type: 'bot',
-        content: data.response,
+        content: formattedResponse,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, botMessage]);
@@ -299,52 +568,140 @@ Let's make this a productive learning session!`
     }
   };
 
-  // Add this search animation component
+  // Update the SearchingAnimation component
   const SearchingAnimation = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="flex items-center space-x-2 text-cyan-400"
-    >
-      <Globe className="h-4 w-4 animate-spin" />
-      <span className="text-sm">
-        Searching the web
-        <span className="inline-block w-8">
-          {'.'.repeat(searchAnimation + 1)}
-        </span>
-      </span>
-    </motion.div>
+
+        <span className="text-white text-sm font-medium">Searching the web...</span>
+     
   );
 
-  // Add the web search toggle component
+  // Update the WebSearchToggle component
   const WebSearchToggle = () => (
-    <div className=" items-center space-x-2 px-4 py-2">
+    <div className="flex items-center space-x-2 px-4 py-2">
       <Switch
         checked={enableWebSearch}
         onChange={setEnableWebSearch}
         className={`${
-          enableWebSearch ? 'bg-cyan-600' : 'bg-zinc-700'
-        } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2`}
+          enableWebSearch ? 'bg-gradient-to-r from-cyan-600 to-blue-600' : 'bg-zinc-700'
+        } relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ring-offset-black`}
       >
-        <span className="sr-only">Enable web search</span>
-        <span
+        <motion.span
+          layout
           className={`${
-            enableWebSearch ? 'translate-x-6' : 'translate-x-1'
-          } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+            enableWebSearch ? 'translate-x-6 bg-white' : 'translate-x-1 bg-zinc-300'
+          } inline-block h-4 w-4 transform rounded-full shadow-lg transition-all duration-300`}
         />
       </Switch>
-      <span className="text-sm text-cyan-300">
-        Web Search {enableWebSearch ? 'Enabled' : 'Disabled'}
-      </span>
-      <Globe className={`h-4 w-4 ${enableWebSearch ? 'text-cyan-400' : 'text-zinc-500'}`} />
+      <motion.div 
+        className="flex items-center space-x-2"
+        animate={{ color: enableWebSearch ? '#67e8f9' : '#71717a' }}
+      >
+        <span className="text-sm font-medium">Web Search</span>
+        <Globe className="h-4 w-4" />
+      </motion.div>
+    </div>
+  );
+
+  // Add this to your existing search state handling
+  useEffect(() => {
+    if (searchState.status === 'searching') {
+      // Progress bar will automatically start due to the animation
+    } else if (searchState.status === 'found' || searchState.status === 'error') {
+      // When search is complete, ensure progress bar is at 100%
+      const progressBar = document.querySelector('.search-progress-bar') as HTMLElement;
+      if (progressBar) {
+        progressBar.style.transform = 'translateX(0%)';
+      }
+    }
+  }, [searchState.status]);
+
+  // Add Upload Modal Component
+  const UploadModal = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-zinc-900 rounded-lg p-6 max-w-md w-full mx-4 border border-orange-500/20">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-orange-500">Upload Content</h3>
+          <button
+            onClick={() => setShowUploadModal(false)}
+            className="text-orange-400 hover:text-orange-300"
+            disabled={uploadingFile}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* File Upload Section */}
+          <div className="border border-orange-500/20 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-orange-400 flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Upload Document
+              </span>
+            </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".pdf,.docx"
+              disabled={uploadingFile}
+              className={`block w-full text-sm text-orange-400
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-orange-500 file:text-black
+                hover:file:bg-orange-600
+                file:cursor-pointer
+                ${uploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
+            />
+            <p className="text-xs text-orange-400/60 mt-2">Supported formats: PDF, DOCX</p>
+          </div>
+
+          {/* YouTube URL Section */}
+          <div className="border border-orange-500/20 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-orange-400 flex items-center gap-2">
+                <Youtube className="h-4 w-4" />
+                YouTube Video
+              </span>
+            </div>
+            <form onSubmit={handleYoutubeUpload} className="flex gap-2">
+              <input
+                type="url"
+                ref={youtubeInputRef}
+                placeholder="Paste YouTube URL"
+                disabled={uploadingFile}
+                className={`flex-1 px-3 py-2 bg-zinc-800 border border-orange-500/20 rounded-lg text-orange-400 text-sm
+                  ${uploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
+              />
+              <button
+                type="submit"
+                disabled={uploadingFile}
+                className={`px-4 py-2 bg-orange-500 text-black rounded-lg transition-colors
+                  ${uploadingFile ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-600'}`}
+              >
+                Process
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {uploadingFile && (
+          <div className="mt-4 flex items-center justify-center text-orange-400">
+            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+            <span>Processing...</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 
   return (
-    <div className="relative">
+    <div className="relative font-inter"> {/* Add font-inter for better typography */}
       {/* Initial welcome message with dashboard-matching styling */}
-      <div className="bg-zinc-900 border-t border-orange-500/20 p-4">
+      <div className="bg-zinc-900/95 backdrop-blur-sm border-t border-orange-500/20 p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
             <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-full flex items-center justify-center">
@@ -361,7 +718,14 @@ Let's make this a productive learning session!`
             </svg>
             <span className="text-sm font-medium">History</span>
           </button>
-          <div className=" items-center space-x-2">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-zinc-800 text-orange-400 rounded-lg hover:bg-zinc-700 transition-colors border border-orange-500/20"
+            >
+              <Upload className="h-4 w-4" />
+              <span className="text-sm font-medium">Upload</span>
+            </button>
             <WebSearchToggle />
           </div>
         </div>
@@ -390,7 +754,12 @@ Let's make this a productive learning session!`
 
       {/* Conversation Modal with dashboard theme */}
       {showConversationModal && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-black">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-40 flex flex-col bg-black/95 backdrop-blur-sm"
+        >
           <div className="p-4 border-b border-orange-500/20 bg-zinc-900 shadow-sm flex justify-between items-center">
             <h3 className="text-xl font-semibold text-orange-500">Conversation</h3>
             <div className="flex items-center space-x-3">
@@ -417,258 +786,112 @@ Let's make this a productive learning session!`
             </div>
           </div>
 
-          {/* Messages container with dashboard theme */}
-          <div className="flex-1 overflow-y-auto p-6 bg-black">
-            {messages.map(message => (
-              <div
-                key={message.id}
-                className={`flex items-start gap-4 mb-6 ${
-                  message.type === 'user' ? 'flex-row-reverse' : ''
-                }`}
-              >
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    message.type === 'user' 
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-black'
-                      : message.type === 'search'
-                        ? 'bg-gradient-to-r from-blue-600 to-cyan-400 text-white'
-                        : 'bg-gradient-to-r from-zinc-800 to-zinc-700 text-orange-400 border border-orange-500/20'
+          {/* Messages container with enhanced animations */}
+          <div className="flex-1 overflow-y-auto p-6 bg-black/90">
+            <AnimatePresence mode="popLayout">
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  variants={messageAnimationVariants}
+                  initial="hidden"
+                  animate="visible"
+                  whileHover="hover"
+                  layout
+                  className={`flex items-start gap-4 mb-6 ${
+                    message.type === 'user' ? 'flex-row-reverse' : ''
                   }`}
                 >
-                  {message.type === 'user' ? (
-                    <User className="h-5 w-5" />
-                  ) : message.type === 'search' ? (
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  ) : (
-                    <Bot className="h-5 w-5" />
-                  )}
-                </div>
-                <div className={`max-w-[80%] ${message.type === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div 
-                    className={`p-4 rounded-2xl backdrop-blur-sm ${
-                      message.type === 'search' 
-                        ? 'bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-cyan-500/30 shadow-lg shadow-cyan-500/10'
-                        : message.type === 'user'
-                          ? 'bg-gradient-to-br from-zinc-900 to-zinc-800 text-white border border-orange-500/20 shadow-lg shadow-orange-500/5'
-                          : 'bg-gradient-to-br from-zinc-900 to-zinc-800 text-white border border-orange-500/20 shadow-lg shadow-orange-500/5'
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      message.type === 'user' 
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-black'
+                        : message.type === 'search'
+                          ? 'bg-gradient-to-r from-blue-600 to-cyan-400 text-white'
+                          : 'bg-gradient-to-r from-zinc-800 to-zinc-700 text-orange-400'
                     }`}
                   >
-                    {message.type === 'search' ? (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="w-full"
-                      >
-                        <div 
-                          className="flex items-center justify-between mb-3 cursor-pointer"
-                          onClick={() => setExpandedSearchId(expandedSearchId === message.id ? null : message.id)}
-                        >
-                          <div className="flex items-center space-x-2">
-                            <Search className="h-5 w-5 text-cyan-400" />
-                            <h3 className="text-lg font-semibold text-cyan-300">
-                              Academic & Research Sources ({message.sources?.filter(s => s.is_academic).length || 0})
-                            </h3>
-                          </div>
-                          <motion.div
-                            animate={{ rotate: expandedSearchId === message.id ? 180 : 0 }}
-                            className="text-cyan-400"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </motion.div>
-                        </div>
-
-                        {/* Compact View */}
-                        {expandedSearchId !== message.id && (
-                          <motion.div 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex flex-wrap gap-2"
-                          >
-                            {message.sources?.map((source, index) => (
-                              <motion.div
-                                key={index}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className={`px-3 py-1.5 rounded-full ${
-                                  source.is_academic 
-                                    ? 'bg-blue-900/40 border-blue-500/20 text-blue-300' 
-                                    : 'bg-cyan-900/40 border-cyan-500/20 text-cyan-300'
-                                } border text-sm flex items-center space-x-2 hover:bg-opacity-60 transition-colors cursor-pointer`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.open(source.link, '_blank');
-                                }}
-                              >
-                                {source.is_academic ? (
-                                  <Database className="h-3.5 w-3.5" />
-                                ) : (
-                                  <Globe className="h-3.5 w-3.5" />
-                                )}
-                                <span>{getDomainFromUrl(source.link)}</span>
-                              </motion.div>
-                            ))}
-                          </motion.div>
-                        )}
-
-                        {/* Expanded View with academic highlighting */}
-                        <AnimatePresence>
-                          {expandedSearchId === message.id && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="space-y-3 mt-3 overflow-hidden"
-                            >
-                              {/* Academic sources first */}
-                              {message.sources?.filter(s => s.is_academic).map((source, index) => (
-                                <motion.div
-                                  key={`academic-${index}`}
-                                  initial={{ opacity: 0, x: -20 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: index * 0.1 }}
-                                  className="p-4 rounded-lg bg-blue-950/50 border border-blue-500/20 
-                                           hover:border-blue-500/40 transition-all"
-                                >
-                                  <a
-                                    href={source.link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block group"
-                                  >
-                                    <div className="flex items-start justify-between">
-                                      <h4 className="text-cyan-300 font-medium group-hover:text-cyan-200 
-                                                   transition-colors flex-1">
-                                        {source.title}
-                                      </h4>
-                                      <span className="text-xs text-cyan-400 px-2 py-1 bg-cyan-950/50 
-                                                     rounded-full ml-2">
-                                        {getDomainFromUrl(source.link)}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-cyan-200/70 mt-2 line-clamp-2 
-                                              group-hover:text-cyan-200/90 transition-colors">
-                                      {source.summary}
-                                    </p>
-                                    <motion.div 
-                                      className="flex items-center justify-between mt-3"
-                                      whileHover={{ scale: 1.02 }}
-                                    >
-                                      <div className="flex items-center text-xs text-cyan-400 
-                                                   group-hover:text-cyan-300">
-                                        <Database className="h-4 w-4 mr-1" />
-                                        View Source
-                                      </div>
-                                      <span className="text-xs text-cyan-400/60">
-                                        Educational Resource
-                                      </span>
-                                    </motion.div>
-                                  </a>
-                                </motion.div>
-                              ))}
-                              
-                              {/* Other sources */}
-                              {message.sources?.filter(s => !s.is_academic).map((source, index) => (
-                                <motion.div
-                                  key={`other-${index}`}
-                                  initial={{ opacity: 0, x: -20 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: index * 0.1 }}
-                                  className="p-4 rounded-lg bg-cyan-950/50 border border-cyan-500/20 
-                                           hover:border-cyan-500/40 transition-all"
-                                >
-                                  <a
-                                    href={source.link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block group"
-                                  >
-                                    <div className="flex items-start justify-between">
-                                      <h4 className="text-cyan-300 font-medium group-hover:text-cyan-200 
-                                                   transition-colors flex-1">
-                                        {source.title}
-                                      </h4>
-                                      <span className="text-xs text-cyan-400 px-2 py-1 bg-cyan-950/50 
-                                                     rounded-full ml-2">
-                                        {getDomainFromUrl(source.link)}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-cyan-200/70 mt-2 line-clamp-2 
-                                              group-hover:text-cyan-200/90 transition-colors">
-                                      {source.summary}
-                                    </p>
-                                    <motion.div 
-                                      className="flex items-center justify-between mt-3"
-                                      whileHover={{ scale: 1.02 }}
-                                    >
-                                      <div className="flex items-center text-xs text-cyan-400 
-                                                   group-hover:text-cyan-300">
-                                        <Database className="h-4 w-4 mr-1" />
-                                        View Source
-                                      </div>
-                                      <span className="text-xs text-cyan-400/60">
-                                        Educational Resource
-                                      </span>
-                                    </motion.div>
-                                  </a>
-                                </motion.div>
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </motion.div>
+                    {message.type === 'user' ? (
+                      <User className="h-5 w-5" />
+                    ) : message.type === 'search' ? (
+                      <Globe className="h-5 w-5" />
                     ) : (
-                      <ReactMarkdown 
-                        className={`prose prose-invert max-w-none
-                          prose-p:text-white prose-headings:text-white
-                          prose-strong:text-white prose-em:text-white/90
-                          prose-code:text-white/90 prose-pre:bg-black/20
-                          prose-a:text-white prose-a:underline hover:prose-a:text-white/90
-                          prose-li:text-white`}
+                      <Bot className="h-5 w-5" />
+                    )}
+                  </motion.div>
+                  <div className={`flex-1 ${message.type === 'user' ? 'items-end' : 'items-start'}`}>
+                    {message.type === 'search' && message.sources ? (
+                      <SourcesBox sources={message.sources} />
+                    ) : (
+                      <motion.div 
+                        className={`p-4 rounded-2xl backdrop-blur-sm ${
+                          message.type === 'bot' 
+                            ? 'bg-gradient-to-br from-zinc-900/95 to-zinc-800/95 border border-orange-500/20 text-white'
+                            : 'bg-gradient-to-br from-orange-500 to-amber-500 text-white'
+                        }`}
                       >
-                        {message.content}
-                      </ReactMarkdown>
+                        <ReactMarkdown 
+                          className="prose prose-invert max-w-none"
+                          components={{
+                            p: ({children}) => <p className="text-white/90">{children}</p>,
+                            a: ({children, href}) => (
+                              <a href={href} className="text-blue-400 hover:text-blue-300 transition-colors" target="_blank" rel="noopener noreferrer">
+                                {children}
+                              </a>
+                            ),
+                            ul: ({children}) => <ul className="text-white/90 list-disc ml-4">{children}</ul>,
+                            ol: ({children}) => <ol className="text-white/90 list-decimal ml-4">{children}</ol>,
+                            li: ({children}) => <li className="text-white/90">{children}</li>,
+                            code: ({children}) => <code className="bg-zinc-800 text-white/90 px-1 rounded">{children}</code>,
+                            pre: ({children}) => <pre className="bg-zinc-800 p-4 rounded-lg overflow-x-auto">{children}</pre>,
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </motion.div>
                     )}
                   </div>
-                  <span className="text-xs text-orange-200/40 mt-2 block">
-                    {message.timestamp.toLocaleTimeString()}
-                  </span>
-                </div>
-              </div>
-            ))}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            
+
+            {/* Loading State */}
             {isGenerating && (
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-r from-zinc-800 to-zinc-700 text-orange-400 border border-orange-500/20">
-                  <Bot className="h-5 w-5" />
-                </div>
-                <div className="max-w-[80%] items-start">
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white border border-orange-500/20 shadow-lg shadow-orange-500/5">
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-white" />
-                      <span className="text-sm text-white">{loadingStates[currentLoadingState]}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {searchState.status === 'searching' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className="flex items-start gap-4 mb-6"
               >
+                <motion.div
+                  variants={loadingVariants}
+                  animate="animate"
+                  className="flex items-center space-x-3 p-4 bg-gradient-to-r from-zinc-900/90 to-zinc-800/90 rounded-2xl border border-orange-500/20"
+                >
+                  <Loader2 className="h-5 w-5 animate-spin text-orange-400" />
+                  <span className="text-orange-200 font-medium">
+                    {loadingStates[currentLoadingState]}
+                  </span>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {searchState.status === 'searching' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="flex  items-center gap-4 mb-6"
+              >
                 <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-r from-cyan-600 to-blue-600 text-white">
                   <Globe className="h-5 w-5 animate-spin" />
                 </div>
                 <div className="max-w-[80%] items-start">
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-900/90 to-blue-900/90 border border-cyan-500/30">
+                  
                     <SearchingAnimation />
-                  </div>
+                  
                 </div>
               </motion.div>
             )}
@@ -699,7 +922,7 @@ Let's make this a productive learning session!`
               </button>
             </form>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* History Modal with dashboard theme */}
@@ -801,6 +1024,9 @@ Let's make this a productive learning session!`
           </div>
         </div>
       )}
+
+      {/* Add Upload Modal */}
+      {showUploadModal && <UploadModal />}
     </div>
   );
 }
