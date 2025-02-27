@@ -38,7 +38,7 @@ python backend/main.py
 ```bash
 pip install -r requirements.txt
 
-
+```
 5. Open your browser and navigate to `http://localhost:5173` to view the application.
 
 
