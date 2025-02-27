@@ -44,7 +44,7 @@ pip install -r requirements.txt
 
 ### To use the application, you need to have LM Studio running (setup the url for that), and the API key for OpenAI.
 
-```<img width="1439" alt="Screenshot 2025-02-26 at 6 47 42 PM" src="https://github.com/user-attachments/assets/bcb587cf-91b9-4a2a-9712-50c84e014cd1" />
+```<img width="1439" alt="Screenshot 2025-02-26 at 6 47 42 PM" src="https://github.com/user-attachments/assets/bcb587cf-91b9-4a2a-9712-50c84e014cd1" /> ```
 <img width="1437" alt="Screenshot 2025-02-26 at 6 47 52 PM" src="https://github.com/user-attachments/assets/e2627932-674b-4e36-be1e-b95ee72cc6d9" />
 <img width="1432" alt="Screenshot 2025-02-26 at 6 48 00 PM" src="https://github.com/user-attachments/assets/07cd0722-cf30-484e-a9a2-14438a16b61c" />
 
