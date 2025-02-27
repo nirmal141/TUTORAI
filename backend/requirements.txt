@@ -6,3 +6,6 @@ requests
 python-dotenv
 uvicorn
 dotenv
+bs4
+duckduckgo_search
+supabase
