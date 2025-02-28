@@ -9,6 +9,9 @@ LM_STUDIO_HEADERS = {
 }
 
 async def process_chat_request(request):
+
+    print("entered process_chat_request")
+
     system_message = f"You are Professor {request.professor.name}, an expert educator in {request.professor.field}..."
     
     search_context = ""
@@ -48,7 +51,8 @@ async def call_lm_studio(system_message, message):
         raise HTTPException(status_code=500, detail=f"LM Studio error: {response.status_code}")
 
 async def call_openai(system_message, message, search_context, search_results):
-    client = OpenAIClient()  # Assuming a utility client for OpenAI setup
+    client = OpenAIClient()  
+    
     messages = [
         {"role": "system", "content": system_message},
         {"role": "user", "content": message}
@@ -60,8 +64,8 @@ async def call_openai(system_message, message, search_context, search_results):
             "content": "Please use the web search results above to enhance your response, but maintain your role as an educator."
         })
     
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
+    response = client.chat(
+        model="gpt-4o-mini", 
         messages=messages,
         temperature=0.85
     )
