@@ -8,3 +8,4 @@ duckduckgo-search
 httpx
 PyPDF2
 pdfplumber
+supabase
