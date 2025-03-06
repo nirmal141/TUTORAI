@@ -1,8 +1,10 @@
-fpdf2
 openai
 fastapi
-pydantic
-requests
-python-dotenv
 uvicorn
-dotenv
+python-dotenv
+requests
+bs4
+duckduckgo-search
+httpx
+PyPDF2
+pdfplumber

@@ -13,6 +13,14 @@ import re
 import json
 from fastapi.responses import StreamingResponse
 import httpx
+import PyPDF2
+import io
+import tempfile
+import pdfplumber
+import uuid
+import random
+import string
+
 
 load_dotenv()
 
@@ -24,6 +32,8 @@ origins = [
     "http://127.0.0.1:3173",
     "http://localhost:3000",    # Alternative React port
     "http://127.0.0.1:3000",
+    "http://localhost:5173",    # Vite's actual default port
+    "http://127.0.0.1:5173",
 ]
 
 app.add_middleware(
@@ -42,6 +52,21 @@ class Professor(BaseModel):
     teachingMode: str
     adviceType: str
 
+class ProfessorAvailability(BaseModel):
+    professor_name: str
+    date: str
+    start_time: str
+    end_time: str
+    meeting_link: Optional[str] = None
+    is_booked: bool = False
+    
+class MeetingBooking(BaseModel):
+    availability_id: str
+    student_name: str
+    student_email: str
+    topic: str
+    questions: Optional[str] = None
+
 class ChatRequest(BaseModel):
     message: str
     model_type: str
@@ -56,6 +81,9 @@ LM_STUDIO_URL = "http://127.0.0.1:1234/v1/chat/completions"
 LM_STUDIO_HEADERS = {
     "Content-Type": "application/json"
 }
+
+# Initialize knowledge graph
+
 
 async def get_web_search_results(query: str, professor: dict, num_results: int = 5):
     try:
@@ -210,6 +238,12 @@ async def chat(request: ChatRequest):
                 system_message += "3. Use bullet points for key insights\n"
                 system_message += "4. Maintain your role as an educator while integrating these sources\n"
 
+        # Update knowledge graph with professor data
+        
+
+        # Add search results to knowledge graph
+        
+
         if request.model_type == "local":
             try:
                 print("Attempting LM Studio request...")
@@ -287,6 +321,240 @@ async def chat(request: ChatRequest):
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Add knowledge graph endpoint
+@app.get("/api/knowledge-graph")
+async def get_knowledge_graph(concept: Optional[str] = None):
+    try:
+        return knowledge_graph.get_graph_data(concept)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Add after the other model classes
+class DocumentChatRequest(BaseModel):
+    document_id: str
+    document_url: str
+    document_title: str
+    message: str
+    previous_messages: list = []
+
+# Add this function to extract text from PDF URLs
+async def extract_text_from_pdf_url(pdf_url):
+    try:
+        print(f"Downloading PDF from URL: {pdf_url}")
+        response = requests.get(pdf_url)
+        response.raise_for_status()  # Check if download was successful
+        
+        # Method 1: Try with PyPDF2 first
+        try:
+            print("Extracting text using PyPDF2...")
+            pdf_content = io.BytesIO(response.content)
+            pdf_reader = PyPDF2.PdfReader(pdf_content)
+            
+            text = ""
+            for page_num in range(len(pdf_reader.pages)):
+                page = pdf_reader.pages[page_num]
+                text += page.extract_text() + "\n\n"
+            
+            if text.strip():
+                return text
+        except Exception as e:
+            print(f"PyPDF2 extraction failed: {e}")
+        
+        # Method 2: Try with pdfplumber if PyPDF2 fails or returns empty text
+        print("Extracting text using pdfplumber...")
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
+            temp_file.write(response.content)
+            temp_file_path = temp_file.name
+        
+        text = ""
+        with pdfplumber.open(temp_file_path) as pdf:
+            for page in pdf.pages:
+                extracted = page.extract_text()
+                if extracted:
+                    text += extracted + "\n\n"
+        
+        return text
+    except Exception as e:
+        print(f"Error extracting text from PDF: {e}")
+        return f"Error extracting text from PDF: {str(e)}"
+
+# Update the document_chat endpoint
+@app.post("/api/document-chat")
+async def document_chat(request: DocumentChatRequest):
+    try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        # Download and extract text from the PDF
+        document_text = await extract_text_from_pdf_url(request.document_url)
+        
+        if not document_text or document_text.startswith("Error"):
+            return {"response": "I couldn't extract text from this document. The PDF might be scanned, password-protected, or in an unsupported format."}
+        
+        # Truncate text if too long
+        max_chars = 100000  # Adjust based on token limits
+        if len(document_text) > max_chars:
+            document_text = document_text[:max_chars] + "...(content truncated due to length)"
+        
+        # Build context from previous messages
+        messages = [
+            {"role": "system", "content": f"You are a helpful assistant analyzing the document '{request.document_title}'. Provide accurate information based on the document content. If you don't know something or it's not in the document, be honest about it."}
+        ]
+        
+        # Add previous conversation context
+        for msg in request.previous_messages:
+            messages.append({"role": msg["role"], "content": msg["content"]})
+        
+        # Add the document content and user's question
+        messages.append({
+            "role": "user", 
+            "content": f"Here is the content of the document '{request.document_title}':\n\n{document_text}\n\nUser question: {request.message}\n\nPlease provide a helpful response based on the document content."
+        })
+        
+        # Get response from OpenAI
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",  # Using 3.5 turbo for faster responses and lower token usage
+            messages=messages,
+            temperature=0.7,
+            max_tokens=1000
+        )
+        
+        return {"response": response.choices[0].message.content}
+    
+    except Exception as e:
+        print(f"Error in document_chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing document chat: {str(e)}")
+
+# Initialize storage for availabilities and bookings (in-memory for demo purposes)
+# In production, this should be a database
+professor_availabilities = []
+meeting_bookings = []
+
+def generate_google_meet_link():
+    """Generate a random Google Meet link."""
+    # Generate a random 10-character meeting ID
+    meeting_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
+    return f"https://meet.google.com/{meeting_id}-{random.randint(100, 999)}-{random.randint(100, 999)}"
+
+@app.post("/api/professor/availability")
+async def add_professor_availability(availability: ProfessorAvailability):
+    # Generate a unique ID for the availability
+    availability_id = str(uuid.uuid4())
+    
+    # Generate a Google Meet link if not provided
+    if not availability.meeting_link:
+        meeting_link = generate_google_meet_link()
+    else:
+        meeting_link = availability.meeting_link
+    
+    # Store availability with its ID and meeting link
+    stored_availability = availability.dict()
+    stored_availability["id"] = availability_id
+    stored_availability["meeting_link"] = meeting_link
+    professor_availabilities.append(stored_availability)
+    
+    return {
+        "id": availability_id, 
+        "meeting_link": meeting_link,
+        "status": "Availability added successfully"
+    }
+
+@app.get("/api/professor/availability")
+async def get_professor_availabilities(professor_name: Optional[str] = None):
+    if professor_name:
+        # Filter availabilities by professor name
+        filtered_availabilities = [a for a in professor_availabilities 
+                                  if a["professor_name"] == professor_name]
+        return {"availabilities": filtered_availabilities}
+    
+    # Return all availabilities if no professor name provided
+    return {"availabilities": professor_availabilities}
+
+@app.post("/api/student/book-meeting")
+async def book_meeting(booking: MeetingBooking):
+    # Find the availability to update
+    availability = None
+    for avail in professor_availabilities:
+        if avail["id"] == booking.availability_id:
+            if avail["is_booked"]:
+                return {"status": "error", "message": "This time slot is already booked"}
+            availability = avail
+            break
+    
+    if not availability:
+        return {"status": "error", "message": "Availability not found"}
+    
+    # Mark as booked
+    availability["is_booked"] = True
+    
+    # Store booking
+    booking_id = str(uuid.uuid4())
+    stored_booking = booking.dict()
+    stored_booking["id"] = booking_id
+    stored_booking["professor_name"] = availability["professor_name"]
+    stored_booking["date"] = availability["date"]
+    stored_booking["start_time"] = availability["start_time"]
+    stored_booking["end_time"] = availability["end_time"]
+    stored_booking["meeting_link"] = availability["meeting_link"]
+    # Make sure availability_id is included in the stored booking
+    stored_booking["availability_id"] = booking.availability_id
+    meeting_bookings.append(stored_booking)
+    
+    return {
+        "id": booking_id,
+        "status": "success",
+        "message": "Meeting booked successfully"
+    }
+
+@app.get("/api/student/bookings")
+async def get_student_bookings(student_email: str):
+    # Filter bookings by student email
+    student_bookings = [b for b in meeting_bookings if b["student_email"] == student_email]
+    return {"bookings": student_bookings}
+
+@app.get("/api/professor/bookings")
+async def get_professor_bookings(professor_name: str):
+    # Filter bookings by professor name
+    professor_bookings = [b for b in meeting_bookings if b["professor_name"] == professor_name]
+    return {"bookings": professor_bookings}
+
+@app.delete("/api/booking/{booking_id}")
+async def cancel_booking(booking_id: str):
+    """Cancel a booking and make the slot available again."""
+    # Find the booking
+    booking_to_cancel = None
+    for i, booking in enumerate(meeting_bookings):
+        if booking["id"] == booking_id:
+            booking_to_cancel = booking
+            # Remove the booking from the list
+            meeting_bookings.pop(i)
+            break
+    
+    if not booking_to_cancel:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Find the corresponding availability and mark it as available
+    availability_id = booking_to_cancel["availability_id"]
+    availability_updated = False
+    
+    for avail in professor_availabilities:
+        if avail["id"] == availability_id:
+            avail["is_booked"] = False
+            availability_updated = True
+            break
+    
+    if not availability_updated:
+        # This is an unexpected state, but we'll handle it gracefully
+        # The booking was deleted, but we couldn't update the availability
+        return {
+            "status": "partial_success",
+            "message": "Booking was cancelled, but the availability status could not be updated"
+        }
+    
+    return {
+        "status": "success",
+        "message": "Booking cancelled successfully"
+    }
 
 if __name__ == "__main__":
     import uvicorn

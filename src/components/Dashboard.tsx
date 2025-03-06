@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Users, Brain, Clock, Sparkles, Zap, Star, Rocket, Globe } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Users, Brain, Sparkles, Zap, Star, ChevronRight, Search, MessageSquare, Lightbulb, BookOpen, Check } from 'lucide-react';
 import { SelectedProfessor } from './Chat';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useNavigate } from 'react-router-dom';
-
+import { ChangeEvent } from 'react';
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface DashboardProps {
   onSelectProfessor: (prof: SelectedProfessor) => void;
@@ -18,39 +19,32 @@ interface DashboardProps {
 export default function Dashboard({ onSelectProfessor }: DashboardProps) {
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState('student');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const stats = [
     { 
-      icon: Rocket, 
+      icon: MessageSquare, 
       label: 'Active Sessions', 
       value: '892', 
       change: '+12.3%',
-      color: 'from-orange-500 to-amber-500',
-      bgColor: 'bg-orange-950/10'
     },
     { 
-      icon: Globe, 
+      icon: Users, 
       label: 'AI Professors', 
       value: '24', 
       change: '+4 this week',
-      color: 'from-orange-600 to-amber-600',
-      bgColor: 'bg-orange-950/10'
     },
     { 
       icon: Zap, 
       label: 'Response Time', 
       value: '1.2s', 
       change: '-0.3s',
-      color: 'from-amber-500 to-yellow-500',
-      bgColor: 'bg-orange-950/10'
     },
     { 
       icon: Brain, 
       label: 'Knowledge Base', 
       value: '2.4TB', 
       change: '+240GB',
-      color: 'from-orange-400 to-amber-400',
-      bgColor: 'bg-orange-950/10'
     },
   ];
 
@@ -70,39 +64,41 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
       specialty: 'Advanced Calculus',
       availability: '24/7',
       rating: 4.9,
-      gradient: 'from-[#FF6B6B] to-[#FF8E53]'
+      icon: BookOpen,
     },
     { 
       name: 'Prof. Johnson', 
       field: 'Physics',
       specialty: 'Quantum Mechanics',
       availability: '24/7',
-      rating: 4.8
+      rating: 4.8,
+      icon: Lightbulb,
     },
     { 
       name: 'Dr. Williams', 
       field: 'Computer Science',
       specialty: 'Machine Learning',
       availability: '24/7',
-      rating: 4.7
+      rating: 4.7,
+      icon: Brain,
     },
     { 
       name: 'Prof. Yann LeCun', 
       field: 'Machine Learning & AI',
       specialty: 'Deep Learning',
       availability: '24/7',
-      rating: 5.0
+      rating: 5.0,
+      icon: Sparkles,
     },
     { 
       name: 'Prof. Andrew Ng', 
       field: 'Deep Learning & AI',
       specialty: 'Neural Networks',
       availability: '24/7',
-      rating: 4.9
+      rating: 4.9,
+      icon: Star,
     },
   ];
-
-  // Also include a general advice option
 
   const handleProfessorClick = (prof: { name: string; field: string }) => {
     setCurrentProfessor(prof);
@@ -125,77 +121,118 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Decorative background elements */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-orange-950/30 to-amber-950/30 blur-3xl opacity-50 transform rotate-12" />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-orange-900/20 to-amber-900/20 blur-3xl opacity-50 transform -rotate-12" />
-      </div>
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Enhanced Header Section */}
+    <div className="min-h-screen">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Section */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.3 }}
+          className="mb-12"
         >
-          <h1 className="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-amber-500 mb-4 tracking-tight">
-            Tutor.AI
-          </h1>
-          <p className="text-lg text-orange-200/80 max-w-2xl mx-auto font-light">
-            Experience personalized learning with our advanced AI professors
-          </p>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-medium tracking-tight">
+                TutorAI
+              </h1>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-1">
+                Your personal AI learning assistant
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {/* Theme Toggle */}
+              <ThemeToggle />
+              
+              {/* Search Bar */}
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                <Input 
+                  type="text" 
+                  placeholder="Search..." 
+                  value={searchQuery}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-zinc-100 dark:bg-zinc-800 border-none focus-visible:ring-1 focus-visible:ring-zinc-300 dark:focus-visible:ring-zinc-700"
+                />
+              </div>
+            </div>
+          </div>
         </motion.div>
 
-        {/* Add this at the top of your dashboard */}
-        <div className="mb-6 flex space-x-2">
-          <Button
-            className={`${activeView === 'student' ? 'bg-orange-500 text-white' : ''}`}
-            onClick={() => {
-              setActiveView('student');
-              navigate('/');
-            }}
-          >
-            Student Dashboard
-          </Button>
-          <Button
-            className={`${activeView === 'professor' ? 'bg-orange-500 text-white' : ''}`}
-            onClick={() => {
-              setActiveView('professor');
-              navigate('/professor-dashboard');
-            }}
-          >
-            Professor Dashboard
-          </Button>
+        {/* Navigation Tabs */}
+        <div className="mb-10">
+          <div className="border-b border-zinc-200 dark:border-zinc-800">
+            <div className="flex space-x-8">
+              <Button
+                variant="ghost"
+                className={`px-0 py-4 rounded-none font-medium text-sm relative ${
+                  activeView === 'student' 
+                    ? 'text-zinc-900 dark:text-white' 
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                }`}
+                onClick={() => {
+                  setActiveView('student');
+                  navigate('/');
+                }}
+              >
+                Student Dashboard
+                {activeView === 'student' && (
+                  <motion.div 
+                    layoutId="activeTab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-900 dark:bg-white"
+                  />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                className={`px-0 py-4 rounded-none font-medium text-sm relative ${
+                  activeView === 'professor' 
+                    ? 'text-zinc-900 dark:text-white' 
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                }`}
+                onClick={() => {
+                  setActiveView('professor');
+                  navigate('/professor-dashboard');
+                }}
+              >
+                Professor Dashboard
+                {activeView === 'professor' && (
+                  <motion.div 
+                    layoutId="activeTab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-900 dark:bg-white"
+                  />
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
 
-        {/* Enhanced Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {stats.map((stat, index) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05, duration: 0.3 }}
             >
-              <Card className={`relative overflow-hidden border-none bg-zinc-900 shadow-xl hover:shadow-orange-500/10 transition-all duration-500 ${stat.bgColor}`}>
-                <div className="absolute inset-0 opacity-10 bg-gradient-to-br from-orange-500 to-transparent" />
-                <CardContent className="p-6 relative">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-3">
-                      <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${stat.color} shadow-lg`}>
-                        <stat.icon className="h-6 w-6 text-black" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-orange-200/60">{stat.label}</p>
-                        <h3 className="text-3xl font-bold mt-1 text-orange-500">
-                          {stat.value}
-                        </h3>
-                      </div>
+              <Card className="h-full border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 shadow-sm hover:shadow-md transition-shadow duration-300">
+                <CardContent className="p-5">
+                  <div className="flex flex-col h-full">
+                    <div className="p-2 rounded-md bg-zinc-100 dark:bg-zinc-700 w-fit mb-3">
+                      <stat.icon className="h-4 w-4 text-zinc-500 dark:text-zinc-300" />
                     </div>
-                    <Badge variant="secondary" className="bg-zinc-800 text-orange-400">
-                      {stat.change}
-                    </Badge>
+                    <div className="flex-grow">
+                      <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{stat.label}</p>
+                      <h3 className="text-2xl font-semibold mt-1 text-zinc-900 dark:text-white">
+                        {stat.value}
+                      </h3>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-700">
+                      <Badge variant="secondary" className="bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 font-normal">
+                        {stat.change}
+                      </Badge>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -203,156 +240,154 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
           ))}
         </div>
 
-        {/* Enhanced Professors Grid */}
-        <div className="space-y-8">
+        {/* Professors Section */}
+        <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-3xl font-bold text-orange-500 tracking-tight">
+            <h2 className="text-xl font-medium text-zinc-900 dark:text-white">
               Available Professors
             </h2>
             <Button 
               variant="outline" 
-              className="gap-2 border-2 border-orange-500/20 hover:border-orange-500/40 text-orange-500"
+              className="text-xs gap-1 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md"
+              size="sm"
             >
-              <Users className="h-4 w-4" />
+              <Users className="h-3.5 w-3.5" />
               View All
+              <ChevronRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {professors.map((prof, index) => (
               <motion.div
                 key={prof.name}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.1 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + index * 0.05, duration: 0.3 }}
+                onClick={() => handleProfessorClick(prof)}
               >
-                <HoverCard>
-                  <HoverCardTrigger>
-                    <Card 
-                      className="cursor-pointer group overflow-hidden bg-zinc-900 border-orange-500/10 hover:border-orange-500/20 transition-all duration-300"
-                      onClick={() => handleProfessorClick(prof)}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-3">
-                            <div className="space-y-1">
-                              <h3 className="text-xl font-semibold text-orange-500 group-hover:text-orange-400 transition-colors">
-                                {prof.name}
-                              </h3>
-                              <Badge variant="secondary" className="bg-gradient-to-r from-orange-500 to-amber-500 text-black font-medium">
-                                {prof.field}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-orange-200/60">
-                              <Clock className="h-4 w-4" />
-                              {prof.availability}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Star className="h-5 w-5 fill-current text-amber-500" />
-                            <span className="font-medium text-orange-200">{prof.rating}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </HoverCardTrigger>
-                  <HoverCardContent className="w-80 backdrop-blur-lg bg-zinc-900/90 border-orange-500/20">
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-semibold text-orange-500">{prof.name}</h4>
-                      <p className="text-sm text-orange-200/60">Specializes in {prof.specialty}</p>
-                      <div className="pt-2 flex gap-2">
-                        <Badge variant="secondary" className="bg-gradient-to-r from-orange-500 to-amber-500 text-black">
+                <Card className="cursor-pointer border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 hover:shadow-md transition-all duration-300 overflow-hidden group">
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 rounded-md bg-zinc-100 dark:bg-zinc-700 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-600 transition-colors duration-300">
+                        <prof.icon className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-medium text-zinc-900 dark:text-white group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors duration-300">
+                          {prof.name}
+                        </h3>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
                           {prof.field}
-                        </Badge>
-                        <Badge variant="outline" className="border-2 border-orange-500/20 text-orange-500">
-                          {prof.availability}
-                        </Badge>
+                        </p>
+                        <div className="flex items-center gap-2 mt-3">
+                          <div className="flex items-center">
+                            <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                            <span className="text-xs font-medium ml-1 text-zinc-600 dark:text-zinc-300">
+                              {prof.rating}
+                            </span>
+                          </div>
+                          <span className="text-xs text-zinc-400 dark:text-zinc-500">•</span>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {prof.specialty}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </HoverCardContent>
-                </HoverCard>
+                  </CardContent>
+                </Card>
               </motion.div>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Success Alert */}
-        {showSuccessAlert && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="fixed top-4 right-4 z-50"
-          >
-            <Card className="border-green-500 bg-green-50 dark:bg-green-900/20">
-              <CardContent className="p-4 flex items-center space-x-2">
-                <Sparkles className="h-5 w-5 text-green-500" />
-                <span className="text-green-700 dark:text-green-300">
-                  Professor {currentProfessor?.name} has been selected!
-                </span>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        {/* Enhanced Dialog */}
-        <Dialog open={showSelectModal} onOpenChange={() => setShowSelectModal(false)}>
-          <DialogContent className="bg-zinc-900 border-orange-500/20">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-orange-500">
-                Configure {currentProfessor?.name}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <Select
-                value={teachingMode}
-                onValueChange={(value) => setTeachingMode(value)}
-              >
-                <SelectTrigger className="bg-zinc-800 border-orange-500/20 text-orange-200">
+      {/* Professor Selection Modal */}
+      <Dialog open={showSelectModal} onOpenChange={setShowSelectModal}>
+        <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-medium">
+              {currentProfessor?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Teaching Mode</p>
+              <Select value={teachingMode} onValueChange={setTeachingMode}>
+                <SelectTrigger className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800">
                   <SelectValue placeholder="Select teaching mode" />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-orange-500/20">
+                <SelectContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
                   <SelectItem value="Virtual">Virtual</SelectItem>
-                  <SelectItem value="In-Person">In-Person</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={adviceType}
-                onValueChange={(value) => setAdviceType(value)}
-              >
-                <SelectTrigger className="bg-zinc-800 border-orange-500/20 text-orange-200">
-                  <SelectValue placeholder="Select advice type" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-orange-500/20">
-                  <SelectItem value="Subject-Specific Advice">Subject-Specific Advice</SelectItem>
-                  <SelectItem value="General Career Advice">General Career Advice</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={modelType}
-                onValueChange={(value) => setModelType(value)}
-              >
-                <SelectTrigger className="bg-zinc-800 border-orange-500/20 text-orange-200">
-                  <SelectValue placeholder="Select model type" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-orange-500/20">
-                  <SelectItem value="openai">OpenAI (Online)</SelectItem>
-                  <SelectItem value="local">Local LLM (Offline)</SelectItem>
+                  <SelectItem value="Interactive">Interactive</SelectItem>
+                  <SelectItem value="Guided">Guided</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <DialogFooter>
-              <Button 
-                onClick={confirmSelection}
-                className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-black hover:from-orange-600 hover:to-amber-600"
-              >
-                Confirm Selection
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Advice Type</p>
+              <Select value={adviceType} onValueChange={setAdviceType}>
+                <SelectTrigger className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800">
+                  <SelectValue placeholder="Select advice type" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                  <SelectItem value="Subject-Specific Advice">Subject-Specific Advice</SelectItem>
+                  <SelectItem value="General Learning Tips">General Learning Tips</SelectItem>
+                  <SelectItem value="Career Guidance">Career Guidance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Model Type</p>
+              <Select value={modelType} onValueChange={setModelType}>
+                <SelectTrigger className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800">
+                  <SelectValue placeholder="Select model type" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                  <SelectItem value="local">Local Model</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSelectModal(false)}
+              className="border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmSelection}
+              className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200"
+            >
+              Start Session
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Alert */}
+      <AnimatePresence>
+        {showSuccessAlert && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed bottom-4 right-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-4 py-3 rounded-lg shadow-lg"
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-1 bg-white/20 dark:bg-zinc-900/20 rounded-full">
+                <Check className="h-4 w-4" />
+              </div>
+              <p className="text-sm font-medium">
+                Session started with {currentProfessor?.name}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
