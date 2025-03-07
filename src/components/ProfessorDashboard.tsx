@@ -25,6 +25,8 @@ export default function ProfessorDashboard() {
   const subjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Literature', 'History'];
   const languages = ['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese'];
   const durations = ['1 Week', '2 Weeks', '1 Month', '3 Months', '6 Months', 'Full Year'];
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedFileDetails, setUploadedFileDetails] = useState<string>('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +35,23 @@ export default function ProfessorDashboard() {
       return;
     }
     setShowChat(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      setUploadedFileDetails(file.name);
+    }
+  };
+
+  const handleUpload = () => {
+    if (!selectedFile) {
+      alert('Please select a file to upload');
+      return;
+    }
+    // Handle the file upload logic here
+    alert(`File "${uploadedFileDetails}" uploaded successfully!`);
   };
 
   // Generate initial prompt based on teaching mode
@@ -171,6 +190,71 @@ export default function ProfessorDashboard() {
           </button>
         </form>
 
+
+
+        <form onSubmit={handlePdfUploadSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Grade Selection */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Grade Level</label>
+              <select
+                value={options.grade}
+                onChange={(e) => setOptions(prev => ({ ...prev, grade: e.target.value }))}
+                className="w-full bg-zinc-900 border border-orange-500/20 rounded-lg p-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+              >
+                <option value="">Select Grade</option>
+                {grades.map(grade => (
+                  <option key={grade} value={grade}>{grade}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Subject Selection */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Subject</label>
+              <select
+                value={options.subject}
+                onChange={(e) => setOptions(prev => ({ ...prev, subject: e.target.value }))}
+                className="w-full bg-zinc-900 border border-orange-500/20 rounded-lg p-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+              >
+                <option value="">Select Subject</option>
+                {subjects.map(subject => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+            </div>
+
+          </div>
+
+          <button
+            type="submit"
+            className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-black rounded-lg hover:from-orange-600 hover:to-amber-600 transition-colors flex items-center justify-center space-x-2"
+          >
+            <span>Generate Teaching Material</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </form>
+
+
+        
+      {/* File Upload Section */}
+      <div className="mt-8 space-y-6">
+          <h2 className="text-xl font-semibold text-orange-400">Upload Teaching Document</h2>
+          <input
+            type="file"
+            onChange={handleFileChange}
+            className="w-full text-orange-200 border border-orange-500/20 rounded-lg p-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+          />
+          <p className="text-sm text-orange-300">{uploadedFileDetails || 'No file selected'}</p>
+          <button
+            onClick={handleUpload}
+            className="px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-lg hover:from-green-600 hover:to-teal-600 transition-colors"
+          >
+            Upload Document
+          </button>
+      </div>
+    </div>
+
         {/* Chat Integration */}
         {showChat && (
           <div className="mt-8">
@@ -186,7 +270,6 @@ export default function ProfessorDashboard() {
             />
           </div>
         )}
-      </div>
-    </div>
+  </div>
   );
 } 
