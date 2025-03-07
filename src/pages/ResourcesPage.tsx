@@ -105,6 +105,7 @@ export default function ResourcesPage() {
       const fileType = getFileType(file.type);
       
       // Upload the file
+
       const uploadedDocument = await uploadFile(file, {
         title: file.name,
         description: '',
@@ -119,6 +120,8 @@ export default function ResourcesPage() {
       setUploadProgress(100);
       
       console.log('Document uploaded successfully:', uploadedDocument);
+
+      //once the file is uplaoded, append it to the RAG
       
       // Reload resources
       await loadResources();
