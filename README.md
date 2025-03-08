@@ -86,7 +86,9 @@ pip install -r backend/requirements.txt
 ## Running the Application
 
 1. Run below command to precompute embeddings for rag creation of professors (don't run it now, already ran once for andrew ng)
-   python3 precompute_embeddings.py
+```bash
+python3 precompute_embeddings.py
+```
    
 2. Start the backend server
 
