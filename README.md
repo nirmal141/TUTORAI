@@ -85,19 +85,22 @@ pip install -r backend/requirements.txt
 
 ## Running the Application
 
-1. Start the backend server
+1. Run below command to precompute embeddings for rag creation of professors (don't run it now, already ran once for andrew ng)
+   python3 precompute_embeddings.py
+   
+2. Start the backend server
 
 ```bash
 python backend/main.py
 ```
 
-2. Start the frontend development server
+3. Start the frontend development server
 
 ```bash
 npm run dev
 ```
 
-3. Open your browser and navigate to `http://localhost:5173` to view the application
+4. Open your browser and navigate to `http://localhost:5173` to view the application
 
 ## API Endpoints
 
