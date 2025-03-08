@@ -103,7 +103,7 @@ export default function ResourcesPage() {
       
       // Extract file type from extension
       const fileType = getFileType(file.type);
-      
+
       // Upload the file
 
       const uploadedDocument = await uploadFile(file, {
@@ -122,13 +122,27 @@ export default function ResourcesPage() {
       console.log('Document uploaded successfully:', uploadedDocument);
 
       //once the file is uplaoded, append it to the RAG
+      const formData = new FormData();
+      formData.append('file', file);
+
+      //below api is to add the pdf to our RAG
+      const response = await fetch("http://localhost:8000/add_to_rag/", {  // Explicit backend URL
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add file to RAG");
+      }
+      console.log("File successfully added to RAG");
       
       // Reload resources
       await loadResources();
       
       // Reset the file input
       event.target.value = '';
-    } catch (error) {
+    }   
+    catch (error) {
       console.error('Upload error:', error);
       setError(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {

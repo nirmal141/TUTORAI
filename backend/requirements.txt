@@ -9,4 +9,8 @@ httpx
 PyPDF2
 pdfplumber
 supabase
-pinecone-client
+pinecone
+python-multipart
+langchain
+langchain-community
+tiktoken

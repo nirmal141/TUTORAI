@@ -1,25 +1,34 @@
-from openai import OpenAI
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import requests
 import os
-from dotenv import load_dotenv
-from typing import Optional, AsyncGenerator, Dict, Any
-from bs4 import BeautifulSoup
-from duckduckgo_search import DDGS
-from urllib.parse import urlparse
-import re
-import json
-from fastapi.responses import StreamingResponse
-import httpx
-import PyPDF2
-import io
-import tempfile
-import pdfplumber
 import uuid
+import io
+import json
+import tempfile
 import random
 import string
+import asyncio
+import re
+from typing import Optional, AsyncGenerator, Dict, Any
+
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+import requests
+import httpx
+from dotenv import load_dotenv
+
+from urllib.parse import urlparse
+from bs4 import BeautifulSoup
+from duckduckgo_search import DDGS
+
+import PyPDF2
+import pdfplumber
+
+from pinecone import Pinecone
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings import OpenAIEmbeddings  # Change this if using a different embedding model
+from openai import OpenAI
 
 
 load_dotenv()
@@ -82,8 +91,12 @@ LM_STUDIO_HEADERS = {
     "Content-Type": "application/json"
 }
 
-# Initialize knowledge graph
-
+# Initialize pinecone
+pc = Pinecone(
+    api_key=os.getenv("PINECONE_API_KEY")
+)
+index = pc.Index(os.getenv("INDEX_NAME"))
+embedder = OpenAIEmbeddings()
 
 async def get_web_search_results(query: str, professor: dict, num_results: int = 5):
     try:
@@ -556,11 +569,31 @@ async def cancel_booking(booking_id: str):
         "message": "Booking cancelled successfully"
     }
 
+@app.post("/add_to_rag/")
+async def add_to_rag(file: UploadFile = File(...)):
+    contents = await file.read()
+
+    pdf_reader = PyPDF2.PdfReader(file.file)
+    text = "\n".join([page.extract_text() for page in pdf_reader.pages if page.extract_text()])
+
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    chunks = text_splitter.split_text(text)
+
+    embeddings = embedder.embed_documents(chunks)
+
+    upsert_data = [
+        (str(uuid.uuid4()), embedding, {"text": chunk})
+        for chunk, embedding in zip(chunks, embeddings)
+    ]
+    index.upsert(upsert_data)
+
+    return {"message": f"Added {len(chunks)} chunks from {file.filename} to RAG"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",  # This allows external connections
+        host="0.0.0.0",  
         port=8000,
-        reload=True  # Enables auto-reload during development
+        reload=True  
     ) 
