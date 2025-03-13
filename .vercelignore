@@ -1,0 +1,9 @@
+.git
+node_modules
+backend
+.env
+.env.local
+.env.development
+.env.example
+README.md
+*.log 
