@@ -9,4 +9,9 @@ httpx
 PyPDF2
 pdfplumber
 supabase
+pinecone
+python-multipart
+langchain
+langchain-community
+tiktoken
 youtube-transcript-api

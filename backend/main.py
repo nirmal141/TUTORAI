@@ -18,10 +18,20 @@ import io
 import tempfile
 import pdfplumber
 import uuid
+import io
+import json
+import tempfile
 import random
 import string
 import time
 from youtube_transcript_api import YouTubeTranscriptApi
+import asyncio
+import re
+
+from pinecone import Pinecone
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings import OpenAIEmbeddings  # Change this if using a different embedding model
+from openai import OpenAI
 
 
 load_dotenv()
@@ -90,8 +100,12 @@ LM_STUDIO_HEADERS = {
     "Content-Type": "application/json"
 }
 
-# Initialize knowledge graph
-
+# Initialize pinecone
+pc = Pinecone(
+    api_key=os.getenv("PINECONE_API_KEY")
+)
+index = pc.Index(os.getenv("INDEX_NAME"))
+embedder = OpenAIEmbeddings()
 
 async def get_web_search_results(query: str, professor: dict, num_results: int = 5):
     try:
@@ -1082,11 +1096,31 @@ def get_youtube_transcript(youtube_url: str) -> str:
         print(f"Error extracting YouTube transcript: {str(e)}")
         return f"Error: {str(e)}"
 
+@app.post("/add_to_rag/")
+async def add_to_rag(file: UploadFile = File(...)):
+    contents = await file.read()
+
+    pdf_reader = PyPDF2.PdfReader(file.file)
+    text = "\n".join([page.extract_text() for page in pdf_reader.pages if page.extract_text()])
+
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    chunks = text_splitter.split_text(text)
+
+    embeddings = embedder.embed_documents(chunks)
+
+    upsert_data = [
+        (str(uuid.uuid4()), embedding, {"text": chunk})
+        for chunk, embedding in zip(chunks, embeddings)
+    ]
+    index.upsert(upsert_data)
+
+    return {"message": f"Added {len(chunks)} chunks from {file.filename} to RAG"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",  # This allows external connections
+        host="0.0.0.0",  
         port=8000,
-        reload=True  # Enables auto-reload during development
+        reload=True  
     ) 
