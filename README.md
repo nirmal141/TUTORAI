@@ -1,129 +1,182 @@
-# TutorAI - Intelligent Educational Platform
+# TutorAI - An AI-Powered Educational Platform
 
-TutorAI is an advanced educational platform that connects students with AI professors for personalized learning experiences. The platform combines modern web technologies with AI capabilities to create an interactive, engaging learning environment.
+TutorAI is an intelligent educational platform that connects students with AI professors specializing in various fields. The platform provides personalized learning experiences through interactive Q&A, document analysis, YouTube video discussions, and virtual office hours.
 
-## Features
+## 🔄 Project Architecture
 
-### 🤖 AI Professors
-- Chat with specialized AI professors in various academic fields
-- Customizable teaching modes and advice types
-- Web search integration for up-to-date information
+The application has been refactored into a clean, modular structure:
 
-### 📝 Document Analysis
-- Upload and analyze PDF documents
-- Ask questions about document content
-- Receive AI-powered explanations and insights
+```
+backend/
+├── app/                      # Main application package
+│   ├── config/               # Configuration settings
+│   ├── models/               # Pydantic data models/schemas
+│   ├── routes/               # API route definitions
+│   ├── services/             # Business logic services
+│   └── utils/                # Helper functions and utilities 
+├── data/                     # Data storage (if applicable)
+├── uploads/                  # Document upload directory
+├── main.py                   # Application entry point
+└── requirements.txt          # Python dependencies
+```
 
-### 📹 YouTube Learning
-- Learn from YouTube videos with AI assistance
-- Extract and analyze video content
-- Get explanations and summaries
+## ✨ Features
 
-### 📅 Virtual Office Hours
-- Book meetings with AI professors
-- Manage meeting schedules and availability
-- Virtual office hours for personalized assistance
+- 🧠 **AI Professor Conversations**: Chat with AI professors specializing in various academic fields
+- 📚 **Document Analysis**: Upload and discuss academic papers, textbooks, and other documents
+- 🎬 **YouTube Learning**: Analyze and discuss educational videos with AI professors
+- 📅 **Virtual Office Hours**: Schedule meetings with AI professors for personalized help
+- 🔍 **Web Search Integration**: Get up-to-date information from academic sources when needed
+- 📊 **Knowledge Graphing**: Visualize connections between academic concepts (placeholder)
 
-### 📚 Educational Resources
-- Access to curated educational materials
-- Knowledge graph visualization
-- Interactive learning tools
+## 🚀 Getting Started
 
-### 🎓 Course Management
-- Browse available courses
-- Track learning progress
-- Personalized course recommendations
+### Prerequisites
 
-## Technical Stack
+- Python 3.8+
+- Node.js 16+ and npm (for the frontend)
+- OpenAI API key (for AI functionality)
+- Pinecone API key (optional, for document embedding/RAG functionality)
 
-### Frontend
-- **React** with TypeScript for the user interface
-- **Tailwind CSS** for styling
-- **Framer Motion** for animations
-- **React Router** for navigation
-- **React Markdown** for rendering markdown content
-
-### Backend
-- **FastAPI** for API endpoints
-- **OpenAI API** for AI chat capabilities
-- **DuckDuckGo Search** for web search integration
-- **PyPDF2 & pdfplumber** for document analysis
-- **Supabase** for database functionality
-
-## Prerequisites
-
-Before you begin, ensure you have the following installed:
-- Python (3.x recommended)
-- Node.js (Latest LTS version)
-- npm or yarn package manager
-- LM Studio (optional, for local model deployment)
-
-## Installation
+### Backend Setup
 
 1. Clone the repository
+   ```bash
+   git clone https://github.com/yourusername/tutorai.git
+   cd tutorai
+   ```
 
-```bash
-git clone https://github.com/nirmal141/TUTORAI.git
-cd TUTORAI
+2. Set up a Python virtual environment
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ```
+
+4. Create a `.env` file based on `.env.example`
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys and settings
+   ```
+
+5. Start the backend server
+   ```bash
+   python main.py
+   # Or alternatively: uvicorn app.main:app --reload
+   ```
+
+   The API will be available at `http://localhost:8000`
+
+### Frontend Setup
+
+1. Install frontend dependencies
+   ```bash
+   cd ..  # Back to the project root
+   npm install
+   ```
+
+2. Start the frontend development server
+   ```bash
+   npm run dev
+   ```
+
+   The frontend will be available at `http://localhost:5173`
+
+## 🔧 Configuration
+
+Create a `.env` file in the backend directory with the following variables:
+
+```
+# OpenAI API Configuration
+OPENAI_API_KEY=your_openai_api_key
+
+# Pinecone Configuration (optional)
+PINECONE_API_KEY=your_pinecone_api_key
+INDEX_NAME=your_pinecone_index_name
 ```
 
-2. Install frontend dependencies
+## 🔌 API Endpoints
+
+### Chat
+
+- `POST /api/chat` - Chat with an AI professor
+- `POST /api/document-chat` - Discuss a specific document with an AI professor
+- `POST /api/youtube-chat` - Discuss a YouTube video with an AI professor
+
+### Documents
+
+- `POST /api/upload` - Upload a document or YouTube URL
+- `GET /api/documents` - Get all documents
+- `GET /api/documents/{document_id}` - Get a specific document
+- `POST /api/add_to_rag` - Add a document to the RAG system (if Pinecone is configured)
+
+### Meetings
+
+- `POST /api/professor/availability` - Add professor availability
+- `GET /api/professor/availability` - Get professor availabilities
+- `POST /api/student/book-meeting` - Book a meeting with a professor
+- `GET /api/student/bookings` - Get a student's bookings
+- `GET /api/professor/bookings` - Get a professor's bookings
+- `DELETE /api/booking/{booking_id}` - Cancel a booking
+
+### Utilities
+
+- `GET /api/health` - Health check endpoint
+- `GET /api/knowledge-graph` - Get knowledge graph data (placeholder)
+
+## 🛠️ Development
+
+### Code Structure
+
+The backend has been refactored to follow these separation of concerns:
+
+- **Models**: Data schemas using Pydantic
+- **Routes**: API endpoint definitions
+- **Services**: Business logic implementation
+- **Utils**: Helper functions and utilities
+- **Config**: Application configuration
+
+### Local Development
+
+For local development, you can enable hot-reloading:
 
 ```bash
-npm install
-```
+# Backend
+cd backend
+uvicorn app.main:app --reload
 
-3. Install backend dependencies
-
-```bash
-pip install -r backend/requirements.txt
-```
-
-4. Set up environment variables
-- Create a `.env` file in the root directory
-- Add your OpenAI API key: `OPENAI_API_KEY=your_api_key_here`
-
-## Running the Application
-
-1. Run below command to precompute embeddings for rag creation of professors (don't run it now, already ran once for andrew ng)
-```bash
-python3 precompute_embeddings.py
-```
-   
-2. Start the backend server
-
-```bash
-python backend/main.py
-```
-
-3. Start the frontend development server
-
-```bash
+# Frontend
+cd ..
 npm run dev
 ```
 
-4. Open your browser and navigate to `http://localhost:5173` to view the application
+### Using LM Studio for Local Models
 
-## API Endpoints
+TutorAI supports using local models via LM Studio:
 
-The backend provides several API endpoints:
+1. Download and install [LM Studio](https://lmstudio.ai/)
+2. Load a compatible model in LM Studio
+3. Start the local server in LM Studio
+4. In your chat request, set `model_type` to `"local"`
 
-- `/api/chat` - Interact with AI professors
-- `/api/document-chat` - Analyze and chat about documents
-- `/api/knowledge-graph` - Access knowledge graph data
-- `/api/professor/availability` - Manage professor availability
-- `/api/student/book-meeting` - Book meetings with professors
-- `/api/student/bookings` - View student's booked meetings
-- `/api/professor/bookings` - View professor's scheduled meetings
+## 📝 License
 
-## User Interface
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-The application features a modern, responsive UI with:
-- Dark/light mode support
-- Animated backgrounds and transitions
-- Sidebar navigation for easy access to features
-- Chat interface with markdown support
-- Interactive components and visualizations
+## 📚 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## Additional Information
 
