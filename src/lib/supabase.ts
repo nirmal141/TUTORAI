@@ -24,7 +24,54 @@ supabase.auth.onAuthStateChange((event, session) => {
 // Types based on the exact database schema
 export type DocumentType = 'document' | 'image' | 'pdf' | 'other';
 export type SubjectType = 'mathematics' | 'physics' | 'chemistry' | 'biology' | 'computer_science' | 'other';
-export type UserRole = 'student' | 'teacher';
+export type UserRole = 'student' | 'teacher' | 'institution_admin';
+
+// Institution-related types
+export interface Institution {
+  id: string;
+  name: string;
+  domain: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Profile {
+  id: string;
+  full_name: string;
+  role: UserRole;
+  institution_id: string | null;
+  email: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeacherStudentRelationship {
+  id: string;
+  teacher_id: string;
+  student_id: string;
+  institution_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Class {
+  id: string;
+  name: string;
+  subject: SubjectType;
+  description: string | null;
+  teacher_id: string;
+  institution_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClassEnrollment {
+  id: string;
+  class_id: string;
+  student_id: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface Document {
   id: string;
@@ -39,7 +86,7 @@ export interface Document {
   created_at: string;
   updated_at: string;
   is_public: boolean;
-  metadata: Record<string, any> | null;
+  metadata: Record<string, unknown> | null;
 }
 
 export interface DocumentAccessLog {
@@ -50,14 +97,6 @@ export interface DocumentAccessLog {
   action_type: 'view' | 'download' | 'chat';
 }
 
-export interface Profile {
-  id: string;
-  full_name: string;
-  role: UserRole;
-  created_at: string;
-  updated_at: string;
-}
-
 interface DocumentMetadata {
   title: string;
   description?: string | null;
@@ -66,7 +105,7 @@ interface DocumentMetadata {
   uploaded_by: string;
   is_public: boolean;
   mime_type?: string | null;
-  metadata?: Record<string, any> | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 // Mock user ID for demo purposes without authentication - using a valid UUID format
@@ -139,6 +178,8 @@ export async function uploadFile(file: File, metadata: DocumentMetadata) {
   }
 }
 
+// This function is used internally by syncStorageWithDatabase 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function listStorageFiles() {
   try {
     console.log('Listing files in storage bucket...');
@@ -247,6 +288,8 @@ function getMimeType(filename: string): string {
   return mimeTypes[ext] || 'application/octet-stream';
 }
 
+// Interface for document access logs structure
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface AccessLog {
   document_id: string;
   action_type: 'view' | 'download' | 'chat';

@@ -1,6 +1,6 @@
 // chat.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, Loader2, Globe, Upload, FileText, Youtube, X, Clock, MessageSquare, Minimize2, Maximize2 } from 'lucide-react';
+import { Send, Bot, Loader2, Globe, Upload, FileText, Youtube, X, Clock, MessageSquare, Minimize2, Maximize2, Trash2, File } from 'lucide-react';
 import ReactMarkdown from 'react-markdown'; // <-- Import react-markdown
 import { useChatHistory } from '../hooks/useChatHistory';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,6 +14,14 @@ interface SearchSource {
   link: string;
   summary: string;
   is_academic?: boolean;  // New field to identify academic sources
+}
+
+// Add new interface for uploaded documents
+interface UploadedDocument {
+  id: string;
+  name: string;
+  type: 'file' | 'youtube';
+  timestamp: Date;
 }
 
 // Update Message interface
@@ -63,8 +71,6 @@ interface SearchState {
   status: 'searching' | 'found' | 'error' | null;
   query: string;
 }
-
-
 
 // Add this component at the top level of your file
 export const SourcesBox = ({ sources }: { sources: SearchSource[] }) => {
@@ -186,6 +192,117 @@ interface UploadResponse {
   message: string;
 }
 
+// Add new DocumentsPanel component
+export const DocumentsPanel = ({ 
+  documents, 
+  activeDocumentId, 
+  onSelectDocument, 
+  onRemoveDocument 
+}: { 
+  documents: UploadedDocument[], 
+  activeDocumentId: string | null,
+  onSelectDocument: (docId: string) => void,
+  onRemoveDocument: (docId: string) => void
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-4 bg-zinc-900/90 border border-blue-500/20 rounded-lg overflow-hidden"
+    >
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-3 hover:bg-zinc-800/50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <File className="h-4 w-4 text-blue-400" />
+          <span className="text-blue-400 text-sm font-medium">
+            {documents.length} Document{documents.length !== 1 ? 's' : ''} Available
+          </span>
+        </div>
+        <motion.div
+          animate={{ rotate: isExpanded ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <svg
+            className="w-4 h-4 text-blue-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </motion.div>
+      </button>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="p-3 space-y-2 border-t border-blue-500/20">
+              {documents.map((doc, index) => (
+                <motion.div
+                  key={doc.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`group flex items-center justify-between p-2 rounded-lg transition-all
+                    ${activeDocumentId === doc.id ? 'bg-blue-500/20' : 'hover:bg-zinc-800/50'}`}
+                >
+                  <button
+                    onClick={() => onSelectDocument(doc.id)}
+                    className="flex items-start gap-3 flex-1 text-left"
+                  >
+                    <div className="flex-shrink-0 mt-1">
+                      {doc.type === 'file' ? (
+                        <FileText className="w-4 h-4 text-blue-400" />
+                      ) : (
+                        <Youtube className="w-4 h-4 text-red-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium truncate ${activeDocumentId === doc.id ? 'text-blue-400' : 'text-zinc-300'}`}>
+                        {doc.name}
+                      </p>
+                      <p className="text-xs text-zinc-500 truncate">
+                        {doc.timestamp.toLocaleString()}
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => onRemoveDocument(doc.id)}
+                    className="p-1 text-zinc-500 hover:text-red-400 transition-colors"
+                    title="Remove document"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              ))}
+              {documents.length === 0 && (
+                <div className="text-center py-3 text-zinc-500">
+                  <p>No documents uploaded yet</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
 export default function Chat({ selectedProfessor, initialPrompt, onClose, isExpanded, onToggleExpand }: ChatProps) {
   const {
     chatHistories,
@@ -217,9 +334,11 @@ Let's make this a productive learning session!`
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [showConversationModal, setShowConversationModal] = useState(false);
+  // This state is set in handleInitialGeneration and handleLoadChatHistory but doesn't control UI visibility
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_showConversationModal, setShowConversationModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [loadingStates] = useState<string[]>([
+  const [loadingStates, setLoadingStates] = useState<string[]>([
     'Analyzing your question...',
     'Researching relevant information...',
     'Formulating a comprehensive response...',
@@ -229,6 +348,7 @@ Let's make this a productive learning session!`
   const [enableWebSearch, setEnableWebSearch] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const youtubeInputRef = useRef<HTMLInputElement>(null);
@@ -331,6 +451,15 @@ Let's make this a productive learning session!`
     return () => clearInterval(interval);
   }, [searchState.status]);
 
+  useEffect(() => {
+    if (!isGenerating && document.querySelector('.loading-indicator')) {
+      // Force remove any lingering loading indicators
+      document.querySelectorAll('.loading-indicator').forEach(el => {
+        el.classList.add('hidden');
+      });
+    }
+  }, [isGenerating]);
+
   const handleClearChat = () => {
     setMessages([{ ...initialBotMessage, timestamp: new Date() }]);
     setInput('');
@@ -396,13 +525,24 @@ Let's make this a productive learning session!`
       }
 
       const data: UploadResponse = await response.json();
-      setCurrentDocumentId(data.document_id);
+      const documentId = data.document_id;
+      setCurrentDocumentId(documentId);
+      
+      // Add to uploaded documents list
+      const newDocument: UploadedDocument = {
+        id: documentId,
+        name: file.name,
+        type: 'file',
+        timestamp: new Date()
+      };
+      
+      setUploadedDocuments(prev => [...prev, newDocument]);
       
       // Add system message about uploaded document
       const uploadMessage: Message = {
         id: messages.length + 1,
         type: 'bot',
-        content: `I've received your document "${file.name}". Feel free to ask me questions about its content.`,
+        content: `I've received your document "${file.name}". It's now active and I can answer questions about its content.`,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, uploadMessage]);
@@ -445,13 +585,38 @@ Let's make this a productive learning session!`
       }
 
       const data: UploadResponse = await response.json();
-      setCurrentDocumentId(data.document_id);
+      const documentId = data.document_id;
+      setCurrentDocumentId(documentId);
+      
+      // Extract video ID or use URL as name
+      let videoName = "YouTube Video";
+      try {
+        const url = new URL(youtubeUrl);
+        const videoId = url.searchParams.get('v');
+        if (videoId) {
+          videoName = `YouTube Video (${videoId})`;
+        } else {
+          videoName = `YouTube Video (${url.pathname.split('/').pop() || 'unknown'})`;
+        }
+      } catch {
+        videoName = `YouTube Video (${new Date().toLocaleTimeString()})`;
+      }
+      
+      // Add to uploaded documents list
+      const newDocument: UploadedDocument = {
+        id: documentId,
+        name: videoName,
+        type: 'youtube',
+        timestamp: new Date()
+      };
+      
+      setUploadedDocuments(prev => [...prev, newDocument]);
       
       // Add system message about uploaded video
       const uploadMessage: Message = {
         id: messages.length + 1,
         type: 'bot',
-        content: `I've processed the YouTube video. Feel free to ask me questions about its content.`,
+        content: `I've processed the YouTube video. It's now active and I can answer questions about its content.`,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, uploadMessage]);
@@ -474,49 +639,187 @@ Let's make this a productive learning session!`
     }
   };
 
-  // Update handleSend to include document context
+  // Add document management functions
+  const handleSelectDocument = (docId: string) => {
+    setCurrentDocumentId(docId);
+    
+    // Find the document name
+    const doc = uploadedDocuments.find(d => d.id === docId);
+    if (doc) {
+      const message: Message = {
+        id: messages.length + 1,
+        type: 'bot',
+        content: `I've activated "${doc.name}". You can now ask me questions about this document.`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, message]);
+    }
+  };
+  
+  const handleRemoveDocument = (docId: string) => {
+    // Remove from state
+    setUploadedDocuments(prev => prev.filter(doc => doc.id !== docId));
+    
+    // If the current document is being removed, set current to null
+    if (currentDocumentId === docId) {
+      setCurrentDocumentId(null);
+      
+      const message: Message = {
+        id: messages.length + 1,
+        type: 'bot',
+        content: `The document has been removed. I can no longer reference it in my answers.`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, message]);
+    }
+  };
+  
+  // Add an indicator for active document
+  const ActiveDocumentIndicator = () => {
+    if (!currentDocumentId) return null;
+    
+    const activeDoc = uploadedDocuments.find(doc => doc.id === currentDocumentId);
+    if (!activeDoc) return null;
+    
+    return (
+      <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 rounded-md mb-4">
+        <div className="relative">
+          {activeDoc.type === 'file' ? (
+            <FileText className="h-4 w-4 text-blue-400" />
+          ) : (
+            <Youtube className="h-4 w-4 text-red-400" />
+          )}
+          <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></span>
+        </div>
+        <div className="text-sm text-blue-400 truncate flex-1">
+          <span className="font-medium">Active document: </span>
+          {activeDoc.name}
+        </div>
+        <button 
+          className="text-zinc-400 hover:text-zinc-200"
+          onClick={() => setCurrentDocumentId(null)}
+          title="Deactivate document"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  };
+
+  // Add a function to reset search state
+  const resetSearchState = () => {
+    setSearchState({ status: null, query: '' });
+  };
+
+  // Add effect to reset search state when web search is toggled off
+  useEffect(() => {
+    if (!enableWebSearch) {
+      resetSearchState();
+    }
+  }, [enableWebSearch]);
+
+  // Modify handleSend to add document indicator
   const handleSend = async (e: React.FormEvent, customMessage?: string) => {
     e.preventDefault();
-    if ((!input.trim() && !customMessage) || isGenerating) return;
-
-    const messageToSend = customMessage || input;
-    setIsGenerating(true);
-    setShowConversationModal(true);
-
+    if (isGenerating) return;
+    
+    const messageContent = customMessage || input;
+    if (!messageContent.trim()) return;
+    
+    // Reset any previous search state
+    resetSearchState();
+    
     // Add user message
     const userMessage: Message = {
       id: messages.length + 1,
       type: 'user',
-      content: messageToSend,
+      content: messageContent,
       timestamp: new Date(),
     };
+    
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-
+    setIsGenerating(true);
+    
+    // Set search state at the beginning of generation
+    if (enableWebSearch) {
+      setSearchState({ status: 'searching', query: messageContent });
+    }
+    
     try {
-      if (enableWebSearch) {
-        setSearchState({ status: 'searching', query: messageToSend });
+      // Update the loading states to include document context if active
+      if (currentDocumentId) {
+        const activeDoc = uploadedDocuments.find(doc => doc.id === currentDocumentId);
+        if (activeDoc) {
+          const newLoadingStates = [
+            `Analyzing your question about "${activeDoc.name}"...`,
+            `Retrieving information from "${activeDoc.name}"...`,
+            `Processing document content...`,
+            `Formulating response based on document...`
+          ];
+          setLoadingStates(newLoadingStates);
+        }
       }
-
-      const response = await fetch('http://localhost:8000/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: messageToSend,
-          model_type: selectedProfessor?.modelType || 'openai',
-          professor: selectedProfessor,
-          enable_search: enableWebSearch,
-          document_id: currentDocumentId, // Add document context
-          structured_response: true
-        }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-      const data = await response.json();
+      
+      let data;
+      
+      // If we have an active document, use the document-chat endpoint instead
+      if (currentDocumentId) {
+        const activeDoc = uploadedDocuments.find(doc => doc.id === currentDocumentId);
+        if (activeDoc) {
+          console.log(`Processing document chat for document: ${activeDoc.name} (${currentDocumentId})`);
+          
+          // Get document URL from server
+          const docResponse = await fetch(`http://localhost:8000/api/documents/${currentDocumentId}`);
+          
+          if (!docResponse.ok) {
+            throw new Error('Could not retrieve document information');
+          }
+          
+          const docData = await docResponse.json();
+          const documentUrl = docData.file_path;
+          
+          // Call document-chat endpoint
+          const response = await fetch('http://localhost:8000/api/document-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              document_id: currentDocumentId,
+              document_url: documentUrl,
+              document_title: activeDoc.name,
+              message: messageContent,
+              previous_messages: [] // We don't track previous messages in this component yet
+            }),
+          });
+          
+          if (!response.ok) throw new Error('Network response was not ok');
+          data = await response.json();
+        } else {
+          // If document not found in local state, fall back to regular chat
+          setCurrentDocumentId(null);
+          throw new Error('Document not found in local state');
+        }
+      } else {
+        // Use regular chat API if no document is active
+        const response = await fetch('http://localhost:8000/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: messageContent,
+            model_type: selectedProfessor?.modelType || 'openai',
+            professor: selectedProfessor,
+            enable_search: enableWebSearch,
+            structured_response: true
+          }),
+        });
+        
+        if (!response.ok) throw new Error('Network response was not ok');
+        data = await response.json();
+      }
 
       // Handle search results if present
       if (enableWebSearch && data.search_results && data.search_results.length > 0) {
-        setSearchState({ status: 'found', query: messageToSend });
+        setSearchState({ status: 'found', query: messageContent });
         const searchMessage: Message = {
           id: messages.length + 2,
           type: 'search',
@@ -527,10 +830,19 @@ Let's make this a productive learning session!`
         setMessages(prev => [...prev, searchMessage]);
       }
 
-      // Format the response with source citations if available
+      // Add document preamble if a document was used
       let formattedResponse = data.response;
+      
+      if (currentDocumentId) {
+        const activeDoc = uploadedDocuments.find(doc => doc.id === currentDocumentId);
+        if (activeDoc && !formattedResponse.includes(activeDoc.name)) {
+          formattedResponse = `*Answering based on document: "${activeDoc.name}"*\n\n${formattedResponse}`;
+        }
+      }
+      
+      // Format the response with source citations if available
       if (data.citations) {
-        formattedResponse = `${data.response}\n\n---\n\n**Sources Used:**\n${
+        formattedResponse = `${formattedResponse}\n\n---\n\n**Sources Used:**\n${
           data.citations.map((citation: string, index: number) => 
             `${index + 1}. ${citation}`
           ).join('\n')
@@ -546,7 +858,7 @@ Let's make this a productive learning session!`
       setMessages(prev => [...prev, botMessage]);
 
     } catch (error) {
-      setSearchState({ status: 'error', query: messageToSend });
+      setSearchState({ status: 'error', query: messageContent });
       console.error('Error details:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       const botErrorMessage: Message = {
@@ -554,20 +866,29 @@ Let's make this a productive learning session!`
         type: 'bot',
         content: selectedProfessor?.modelType === 'local' 
           ? `LM Studio Error: ${errorMessage}. Please ensure LM Studio is running and a model is loaded.`
-          : `Error: ${errorMessage}`,
+          : `Error: ${errorMessage}. ${currentDocumentId ? 'Try uploading the document again or use a different format.' : ''}`,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, botErrorMessage]);
     } finally {
-      setIsGenerating(false);
-      // Reset search state after delay
+      // Reset loading states to default
+      const defaultLoadingStates = [
+        'Analyzing your question...',
+        'Researching relevant information...',
+        'Formulating a comprehensive response...',
+        'Polishing the answer...'
+      ];
+      setLoadingStates(defaultLoadingStates);
+      
+      // Ensure loading state is properly reset
       setTimeout(() => {
-        setSearchState({ status: null, query: '' });
-      }, 2000);
+        setIsGenerating(false);
+        resetSearchState();
+      }, 300); // Small delay to ensure animations complete properly
     }
   };
 
-  // Update the SearchingAnimation component with a more modern design
+  // Revert to the original SearchingAnimation design
   const SearchingAnimation = () => (
     <div className="flex flex-col items-start">
       <div className="flex items-center space-x-2 mb-2">
@@ -584,7 +905,7 @@ Let's make this a productive learning session!`
     </div>
   );
 
-  // Update the WebSearchToggle component with a more modern design
+  // Revert to the original WebSearchToggle design
   const WebSearchToggle = () => (
     <div className="flex items-center space-x-2 px-4 py-2">
       <Switch
@@ -642,6 +963,41 @@ Let's make this a productive learning session!`
             </svg>
           </button>
         </div>
+
+        {/* Show existing documents */}
+        {uploadedDocuments.length > 0 && (
+          <div className="mb-6">
+            <h4 className="text-sm font-medium text-zinc-400 mb-2">Uploaded Documents ({uploadedDocuments.length})</h4>
+            <div className="space-y-2 max-h-36 overflow-y-auto pr-2 custom-scrollbar">
+              {uploadedDocuments.map(doc => (
+                <div key={doc.id} className={`p-2 rounded-lg flex items-center gap-2 ${currentDocumentId === doc.id ? 'bg-blue-500/20' : 'bg-zinc-800/50'}`}>
+                  {doc.type === 'file' ? (
+                    <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  ) : (
+                    <Youtube className="w-4 h-4 text-red-400 flex-shrink-0" />
+                  )}
+                  <span className="text-sm text-zinc-300 truncate flex-1">{doc.name}</span>
+                  <button
+                    onClick={() => handleSelectDocument(doc.id)}
+                    className={`p-1 rounded-md ${currentDocumentId === doc.id ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-400 hover:bg-zinc-700/50 hover:text-blue-400'}`}
+                    title={currentDocumentId === doc.id ? 'Active document' : 'Activate document'}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleRemoveDocument(doc.id)}
+                    className="p-1 text-zinc-500 hover:text-red-400 rounded-md hover:bg-zinc-700/50"
+                    title="Remove document"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* File Upload Section */}
@@ -716,8 +1072,44 @@ Let's make this a productive learning session!`
             <p className="text-xs text-blue-400/60 mt-1">This may take a moment</p>
           </div>
         )}
+        
+        {uploadedDocuments.length > 0 && !uploadingFile && (
+          <div className="mt-5 pt-5 border-t border-zinc-800">
+            <button
+              onClick={() => setShowUploadModal(false)}
+              className="w-full py-2 px-4 bg-gradient-to-r from-blue-600 to-cyan-400 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/20 transition-all"
+            >
+              Done
+            </button>
+          </div>
+        )}
       </motion.div>
     </motion.div>
+  );
+
+  // Add cleanup for loading state
+  useEffect(() => {
+    return () => {
+      // Cleanup function to make sure loading states are properly reset when component unmounts
+      setIsGenerating(false);
+      resetSearchState();
+    };
+  }, []);
+
+  // Add a DocumentBadge component
+  const DocumentBadge = ({ documentName }: { documentName: string }) => (
+    <div className="text-xs text-blue-400 opacity-70 mb-1 flex items-center gap-1">
+      <FileText className="h-3 w-3" />
+      <span>Using document: {documentName}</span>
+    </div>
+  );
+
+  // Add a component to show when a response used web search (but more subtle)
+  const WebSearchBadge = () => (
+    <div className="text-xs text-blue-400 opacity-70 mb-1 flex items-center gap-1">
+      <Globe className="h-3 w-3" />
+      <span>Results from web search</span>
+    </div>
   );
 
   return (
@@ -747,15 +1139,22 @@ Let's make this a productive learning session!`
           >
             <Clock className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowUploadModal(true)}
-            className="rounded-md h-9 w-9 p-0"
-            title="Upload Document"
-          >
-            <Upload className="h-4 w-4" />
-          </Button>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowUploadModal(true)}
+              className="rounded-md h-9 w-9 p-0"
+              title="Upload Document"
+            >
+              <Upload className="h-4 w-4" />
+            </Button>
+            {uploadedDocuments.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                {uploadedDocuments.length}
+              </span>
+            )}
+          </div>
           <WebSearchToggle />
           <Button
             variant="ghost"
@@ -782,9 +1181,17 @@ Let's make this a productive learning session!`
         </div>
       </div>
 
-      {/* Chat Messages */}
+      {/* Chat messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <AnimatePresence initial={false}>
+          {uploadedDocuments.length > 0 && (
+            <DocumentsPanel 
+              documents={uploadedDocuments}
+              activeDocumentId={currentDocumentId}
+              onSelectDocument={handleSelectDocument}
+              onRemoveDocument={handleRemoveDocument}
+            />
+          )}
           {messages.map((message) => (
             <motion.div
               key={message.id}
@@ -799,11 +1206,22 @@ Let's make this a productive learning session!`
                 <SourcesBox sources={message.sources} />
               ) : (
                 <div className={`p-4 rounded-lg ${
-                  message.type === 'user' 
-                    ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                    message.type === 'user'
+                  ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
                 } max-w-[80%]`}>
-                  <ReactMarkdown 
+                  {message.type === 'bot' && message.sources && message.sources.length > 0 && (
+                    <WebSearchBadge />
+                  )}
+                  {message.type === 'bot' && 
+                   currentDocumentId && 
+                   uploadedDocuments.find(doc => doc.id === currentDocumentId) &&
+                   (message.content.includes(uploadedDocuments.find(doc => doc.id === currentDocumentId)?.name || '') || 
+                    message.content.toLowerCase().includes('document') ||
+                    message.content.toLowerCase().includes('resume')) && (
+                    <DocumentBadge documentName={uploadedDocuments.find(doc => doc.id === currentDocumentId)?.name || 'document'} />
+                  )}
+                  <ReactMarkdown
                     className="text-sm prose dark:prose-invert max-w-none"
                     components={{
                       p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
@@ -863,11 +1281,28 @@ Let's make this a productive learning session!`
 
       {/* Chat Input */}
       <form onSubmit={handleSend} className="p-4 border-t border-zinc-200 dark:border-zinc-800">
+        {currentDocumentId && (
+          <div className="mb-2 flex items-center gap-2 p-2 rounded-md bg-blue-500/10 text-blue-400 text-sm">
+            <FileText className="h-4 w-4" />
+            <span className="flex-1 truncate">
+              {uploadedDocuments.find(doc => doc.id === currentDocumentId)?.name || 'Document active'}
+            </span>
+            <button 
+              onClick={() => setCurrentDocumentId(null)} 
+              className="text-blue-400 hover:text-blue-300"
+              type="button"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <div className="flex gap-2">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
+            placeholder={currentDocumentId 
+              ? "Ask a question about the document..." 
+              : "Type your message..."}
             className="flex-1"
           />
           <Button 
@@ -966,6 +1401,9 @@ Let's make this a productive learning session!`
 
       {/* Upload Modal */}
       {showUploadModal && <UploadModal />}
+
+      {/* Active Document Indicator */}
+      <ActiveDocumentIndicator />
     </div>
   );
 }

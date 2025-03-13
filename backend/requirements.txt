@@ -9,3 +9,4 @@ httpx
 PyPDF2
 pdfplumber
 supabase
+youtube-transcript-api

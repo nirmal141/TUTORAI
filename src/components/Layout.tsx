@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from './Sidebar';
-import { User, ChevronDown } from 'lucide-react';
+import { User, ChevronDown, LogOut } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
+import { useNavigate } from 'react-router-dom';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  // Mock user information
-  const mockProfile = {
-    full_name: 'Demo User',
-    role: 'student' as const
-  };
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -24,6 +23,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
     <div className="flex h-screen bg-white dark:bg-zinc-900">
@@ -43,10 +47,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="text-left">
                 <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                  {mockProfile.full_name}
+                  {user?.full_name || 'User'}
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 capitalize">
-                  {mockProfile.role}
+                  {user?.role || 'Guest'}
                 </p>
               </div>
               <ChevronDown 
@@ -64,11 +68,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               >
                 <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-700">
                   <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                    {mockProfile.full_name}
+                    {user?.full_name || 'User'}
                   </p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Signed in as {mockProfile.role}
+                    Signed in as {user?.role || 'Guest'}
                   </p>
+                </div>
+                <div className="py-1">
+                  <button
+                    className="flex items-center w-full px-4 py-2 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign out
+                  </button>
                 </div>
               </div>
             )}

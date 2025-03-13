@@ -1,5 +1,5 @@
 from openai import OpenAI
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from typing import Optional, AsyncGenerator, Dict, Any
 from bs4 import BeautifulSoup
 from duckduckgo_search import DDGS
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 import re
 import json
 from fastapi.responses import StreamingResponse
@@ -20,6 +20,8 @@ import pdfplumber
 import uuid
 import random
 import string
+import time
+from youtube_transcript_api import YouTubeTranscriptApi
 
 
 load_dotenv()
@@ -73,6 +75,12 @@ class ChatRequest(BaseModel):
     professor: Professor
     enable_search: bool = False  # New field to toggle web search
     
+class YoutubeChatRequest(BaseModel):
+    youtube_url: str
+    video_title: str = "Educational Video"
+    message: str
+    previous_messages: list = []
+
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -89,133 +97,310 @@ async def get_web_search_results(query: str, professor: dict, num_results: int =
     try:
         ddgs = DDGS()
         
-        # Create specialized search queries based on professor's field and name
+        # Create more user query-focused search queries
         academic_queries = [
-            f"{professor['name']} {professor['field']} {query}",  # Professor-specific search
-            f"{query} {professor['field']} research papers",      # Field-specific papers
-            f"{professor['name']} github {professor['field']}",   # GitHub/code repositories
-            f"{professor['name']} academic publications",         # Academic publications
-            f"{query} {professor['field']} educational resources" # General field resources
+            f"{query}",  # Direct user query (highest priority)
+            f"{query} research papers",  # Research papers on the query topic
+            f"{query} {professor['field']} latest research",  # Field-specific recent research
+            f"{query} academic publications",  # Academic publications on the query
+            f"{professor['name']} {query}"  # Professor's perspective on the query (lowest priority)
         ]
         
         all_results = []
         formatted_results = []
         search_context = "Relevant academic and research sources:\n\n"
         
+        # Track already processed URLs to avoid duplicates
+        processed_urls = set()
+        
         # Perform multiple targeted searches
         for specialized_query in academic_queries:
-            results = list(ddgs.text(specialized_query, max_results=3))
+            results = list(ddgs.text(specialized_query, max_results=4))
             
             # Process each result with BeautifulSoup
             for result in results:
                 try:
-                    if result.get('href'):
+                    if result.get('href') and result['href'] not in processed_urls:
+                        processed_urls.add(result['href'])
+                        
                         # Fetch the webpage content
-                        response = requests.get(result['href'], timeout=5)
-                        soup = BeautifulSoup(response.text, 'html.parser')
-                        
-                        # Extract more detailed information
-                        title = soup.title.string if soup.title else result.get('title', 'No title')
-                        
-                        # Try to get meta description
-                        meta_desc = soup.find('meta', {'name': 'description'})
-                        description = meta_desc['content'] if meta_desc else result.get('body', 'No description available')
-                        
-                        # Extract main content (customize based on common academic sites)
-                        main_content = soup.find('main') or soup.find('article') or soup.find('div', {'class': ['content', 'main', 'article']})
-                        
-                        # Extract relevant text paragraphs
-                        paragraphs = []
-                        if main_content:
-                            for p in main_content.find_all('p')[:3]:  # Get first 3 paragraphs
-                                paragraphs.append(p.get_text().strip())
-                        
-                        # Check for academic indicators
-                        is_academic = any([
-                            'doi.org' in result['href'],
-                            'scholar.google' in result['href'],
-                            'researchgate' in result['href'],
-                            'academia.edu' in result['href'],
-                            'arxiv.org' in result['href'],
-                            '.edu' in result['href'],
-                            '.ac.' in result['href']
-                        ])
-                        
-                        # Format the result with enhanced information
-                        formatted_result = {
-                            "title": title[:200],  # Limit title length
-                            "link": result['href'],
-                            "summary": description[:500],  # Limit description length
-                            "content": ' '.join(paragraphs)[:1000] if paragraphs else description,  # Use extracted paragraphs if available
-                            "is_academic": is_academic,
-                            "domain": urlparse(result['href']).netloc
-                        }
-                        
-                        formatted_results.append(formatted_result)
-                        
+                        try:
+                            response = requests.get(result['href'], timeout=5)
+                            soup = BeautifulSoup(response.text, 'html.parser')
+                            
+                            # Extract more detailed information
+                            title = soup.title.string if soup.title else result.get('title', 'No title')
+                            
+                            # Try to get meta description
+                            meta_desc = soup.find('meta', {'name': 'description'})
+                            description = meta_desc['content'] if meta_desc else result.get('body', 'No description available')
+                            
+                            # Extract main content (customize based on common academic sites)
+                            main_content = soup.find('main') or soup.find('article') or soup.find('div', {'class': ['content', 'main', 'article']})
+                            
+                            # Extract relevant text paragraphs
+                            paragraphs = []
+                            if main_content:
+                                for p in main_content.find_all('p')[:3]:  # Get first 3 paragraphs
+                                    paragraphs.append(p.get_text().strip())
+                            
+                            # Check for academic indicators
+                            is_academic = any([
+                                'doi.org' in result['href'],
+                                'scholar.google' in result['href'],
+                                'researchgate' in result['href'],
+                                'academia.edu' in result['href'],
+                                'arxiv.org' in result['href'],
+                                '.edu' in result['href'],
+                                '.ac.' in result['href'],
+                                'ncbi.nlm.nih.gov' in result['href'],
+                                'semanticscholar.org' in result['href']
+                            ])
+                            
+                            # Relevance score based on keyword matching
+                            query_keywords = set(query.lower().split())
+                            title_keywords = set(title.lower().split())
+                            desc_keywords = set(description.lower().split())
+                            
+                            # Calculate keyword match score
+                            keyword_match_score = len(query_keywords & title_keywords) * 2 + len(query_keywords & desc_keywords)
+                            
+                            # Format the result with enhanced information
+                            formatted_result = {
+                                "title": title[:200],  # Limit title length
+                                "link": result['href'],
+                                "summary": description[:500],  # Limit description length
+                                "content": ' '.join(paragraphs)[:1000] if paragraphs else description,  # Use extracted paragraphs if available
+                                "is_academic": is_academic,
+                                "relevance_score": keyword_match_score  # Add relevance score for sorting
+                            }
+                            
+                            formatted_results.append(formatted_result)
+                            
+                            if len(formatted_results) >= num_results * 3:  # Collect 3x more results than needed
+                                break
+                                
+                        except (requests.exceptions.RequestException, requests.exceptions.Timeout):
+                            # Skip this result if we can't fetch the page
+                            continue
                 except Exception as e:
-                    print(f"Error processing result: {str(e)}")
+                    print(f"Error processing search result: {e}")
                     continue
             
-            # Remove duplicates based on URL
-            seen_urls = set()
-            unique_results = []
-            for result in formatted_results:
-                if result['link'] not in seen_urls:
-                    seen_urls.add(result['link'])
-                    unique_results.append(result)
-            
-            formatted_results = unique_results
-            
-            # Sort results (academic sources first)
-            formatted_results.sort(key=lambda x: (not x['is_academic'], x['title']))
-            
-            # Limit to requested number of results
-            formatted_results = formatted_results[:num_results]
-            
-            # Create detailed search context
-            for idx, result in enumerate(formatted_results, 1):
-                search_context += f"{idx}. {result['title']}\n"
-                search_context += f"Source: {result['link']}\n"
-                if result['is_academic']:
-                    search_context += "[Academic Source]\n"
-                search_context += f"Summary: {result['summary']}\n\n"
+            if len(formatted_results) >= num_results * 3:
+                break
         
-        print("Formatted academic search results:", formatted_results)
-        return search_context, formatted_results
+        # Sort results by relevance score and academic status
+        formatted_results.sort(key=lambda x: (x.get('relevance_score', 0) * (2 if x.get('is_academic', False) else 1)), reverse=True)
+        
+        # Take top results
+        top_results = formatted_results[:num_results]
+        
+        # Build search context for the LLM
+        for i, result in enumerate(top_results):
+            search_context += f"[Source {i+1}] {result['title']}\n"
+            search_context += f"URL: {result['link']}\n"
+            search_context += f"Summary: {result['summary']}\n"
+            if result.get('content'):
+                search_context += f"Content: {result['content']}\n"
+            search_context += "\n"
+            
+            # Clean up result for the frontend
+            result.pop('content', None)  # Remove content field for frontend
+            result.pop('relevance_score', None)  # Remove score field
+            
+        return search_context, top_results
         
     except Exception as e:
-        print(f"Search error: {str(e)}")
+        print(f"Error in web search: {e}")
         return "", []
             
-# Add a function to process thinking tags
+# Add this function to ensure thinking tags are properly formatted
 def process_thinking_content(content: str) -> Dict[str, Any]:
-    """Extract and process thinking content from model response."""
-    think_pattern = r'<think>(.*?)</think>'
+    """Process model response to ensure proper thinking tag format."""
     
-    # Find thinking content
-    think_match = re.search(think_pattern, content, re.DOTALL)
+    # Check if thinking tags are present
+    think_regex = r'<think>([\s\S]*?)<\/think>'
+    match = re.search(think_regex, content)
     
-    if think_match:
-        thinking = think_match.group(1).strip()
-        # Remove the thinking tags from main content
-        main_content = re.sub(think_pattern, '', content, flags=re.DOTALL).strip()
+    if match:
+        # Thinking tags are present, extract and format
+        thinking = match.group(1).strip()
+        final_content = re.sub(think_regex, '', content).strip()
+        
         return {
-            "type": "thinking",
+            "has_thinking": True,
             "thinking": thinking,
-            "content": main_content
+            "final_content": final_content,
+            "original_content": content
         }
+    else:
+        # No thinking tags, check if we can identify a reasoning pattern
+        # Sometimes models don't use tags but still show thinking
+        paragraphs = content.split('\n\n')
+        if len(paragraphs) > 2 and len(content) > 500:
+            # If content is substantial and has multiple paragraphs,
+            # consider first half as thinking and latter half as answer
+            split_point = len(content) // 2
+            potential_thinking = content[:split_point].strip()
+            potential_answer = content[split_point:].strip()
+            
+            return {
+                "has_thinking": True,
+                "thinking": potential_thinking,
+                "final_content": potential_answer,
+                "original_content": content,
+                "auto_formatted": True
+            }
+        
+        # No thinking pattern detected, return as is
+        return {
+            "has_thinking": False,
+            "thinking": None,
+            "final_content": content,
+            "original_content": content
+        }
+
+# Add this utility function for processing lecture responses
+def process_lecture_formatting(response_text: str) -> dict:
+    """
+    Process lecture-style responses to enhance the classroom experience
+    by detecting and formatting special lecture components.
+    
+    Args:
+        response_text: Raw response text from the model
+        
+    Returns:
+        Dict with formatted response and metadata about lecture components
+    """
+    # Initialize lecture components
+    lecture_components = {
+        "has_whiteboard": False,
+        "has_equation": False,
+        "has_example": False,
+        "has_diagram": False,
+        "has_references": False
+    }
+    
+    formatted_text = response_text
+    
+    # Detect whiteboard content (code blocks)
+    if "```" in formatted_text:
+        lecture_components["has_whiteboard"] = True
+    
+    # Detect equations (using LaTeX-style delimiters)
+    if "$" in formatted_text or "\\begin{equation}" in formatted_text:
+        lecture_components["has_equation"] = True
+    
+    # Detect examples 
+    example_patterns = [
+        r"(?i)example[s]?:", r"(?i)for example,", 
+        r"(?i)let's consider", r"(?i)consider this example"
+    ]
+    for pattern in example_patterns:
+        if re.search(pattern, formatted_text):
+            lecture_components["has_example"] = True
+            break
+    
+    # Detect diagrams
+    diagram_patterns = [r"(?i)diagram", r"(?i)figure", r"(?i)illustration"]
+    for pattern in diagram_patterns:
+        if re.search(pattern, formatted_text):
+            lecture_components["has_diagram"] = True
+            break
+    
+    # Detect references/citations
+    if re.search(r"\[\d+\]|\[Source \d+\]", formatted_text) or "according to" in formatted_text.lower():
+        lecture_components["has_references"] = True
+    
+    # Format whiteboard-style content more prominently
+    # This just adds some metadata, frontend can style it appropriately
     
     return {
-        "type": "content",
-        "content": content
+        "formatted_text": formatted_text,
+        "lecture_components": lecture_components
     }
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     try:
-        # Construct base system message
-        system_message = f"You are Professor {request.professor.name}, an expert educator in {request.professor.field}..."
+        # Create a rich classroom environment based on teaching mode
+        classroom_style = ""
+        if request.professor.teachingMode == "Socratic":
+            classroom_style = """
+You primarily teach through questioning. Rather than giving direct answers, you guide students to discover solutions themselves.
+- Ask thought-provoking questions that lead students toward understanding
+- When a student gives an answer, respond with follow-up questions
+- Acknowledge good reasoning and gently correct misconceptions through more questions
+- Use phrases like "What would happen if...?", "How might we approach...?", "Consider this scenario..."
+- Create a dialogue that feels like a live classroom discussion
+"""
+        elif request.professor.teachingMode == "Practical":
+            classroom_style = """
+You focus on practical applications and real-world examples in your teaching.
+- Ground abstract concepts in concrete, tangible examples that students can relate to
+- Frequently reference how concepts apply in professional settings
+- Use case studies and practical scenarios
+- Phrase explanations as "In practice, this works by...", "A real-world application of this is..."
+- Structure responses like a workshop environment with hands-on explanations
+"""
+        else:  # Default/Virtual teaching mode
+            classroom_style = """
+You provide clear, structured explanations with a mix of theory and application.
+- Begin with clear learning objectives for the topic
+- Organize content logically with main points and supporting details
+- Use examples that clarify difficult concepts
+- Incorporate occasional questions to check understanding
+- Your tone is encouraging but maintains academic rigor
+"""
+
+        # Base system message with enhanced classroom environment
+        base_system_message = f"""You are Professor {request.professor.name}, an expert educator in {request.professor.field}. 
+You are currently teaching a class and responding to a student's question or comment.
+
+CLASSROOM ENVIRONMENT:
+- You are standing at the front of a classroom with students seated before you
+- You have access to a whiteboard/chalkboard for diagrams or equations (use markdown for these)
+- The atmosphere is scholarly but engaging
+- There may be other students listening in
+- This is a live classroom session, not an online chat
+
+YOUR TEACHING STYLE:
+{classroom_style}
+
+SUBJECT EXPERTISE:
+- As an expert in {request.professor.field}, you have deep knowledge of the subject matter
+- You're familiar with both foundational concepts and cutting-edge developments
+- You can explain complex topics at different levels based on student needs
+- You cite relevant scholars or research when appropriate
+
+RESPONSE FORMAT:
+- Address the student directly as if speaking in a classroom
+- Use classroom language like "As we discussed earlier...", "Let's explore this concept...", or "If you look at the board..."
+- For equations or diagrams, use markdown formatting as if writing on a board
+- Include brief pauses or transitions between explanations as you would in a lecture
+- If appropriate for the question, structure your response as: 1) acknowledge the question, 2) provide context, 3) explain the concept, 4) give examples, 5) check understanding
+
+ADVICE SPECIALIZATION:
+You specialize in providing {request.professor.adviceType} to students.
+"""
+        
+        # Add thinking instructions only for local models
+        if request.model_type == "local":
+            system_message = f"""{base_system_message}
+
+Please show your reasoning and thinking process before providing your final answer. 
+Structure your response in this format:
+
+<think>
+[Your step-by-step reasoning and thought process goes here. Include any considerations, evaluations of different approaches, or background knowledge you're applying. This helps the student understand how an expert approaches this type of problem.]
+</think>
+
+[Your final, polished classroom response goes here without the thinking process. This should be a clear, instructive response as if speaking directly to students in your classroom.]
+"""
+        else:
+            # For OpenAI models, use the enhanced base message without thinking instructions
+            system_message = base_system_message
         
         # If web search is enabled, perform specialized academic search
         search_context = ""
@@ -223,6 +408,7 @@ async def chat(request: ChatRequest):
         citations = []
         
         if request.enable_search:
+            print(f"Web search enabled for query: '{request.message}'")
             search_context, search_results = await get_web_search_results(
                 query=request.message,
                 professor={
@@ -230,13 +416,28 @@ async def chat(request: ChatRequest):
                     "field": request.professor.field
                 }
             )
-            if search_context:
-                system_message += "\n\nHere are relevant academic and research sources:\n" + search_context
-                system_message += "\nPlease structure your response in the following format:\n"
-                system_message += "1. Start with a brief overview\n"
-                system_message += "2. For each main point, cite the specific source you're drawing from using [Source X]\n"
-                system_message += "3. Use bullet points for key insights\n"
-                system_message += "4. Maintain your role as an educator while integrating these sources\n"
+            
+            if search_results:
+                # Create search system message with classroom context
+                search_system_message = (
+                    "You have been provided with recent web search results relevant to the student's question. "
+                    "Use these sources to enhance your classroom response while maintaining your teaching style. "
+                    "\n\nGuidelines for using search results in your classroom:"
+                    "\n1. Refer to the sources as if they're materials you're familiar with - 'In a study by...' or 'According to recent research...'"
+                    "\n2. Cite sources naturally as you would in a lecture, using [Source X] notation where X is the source number"
+                    "\n3. Synthesize information from multiple sources when appropriate, as a professor would when lecturing"
+                    "\n4. If the search results don't contain relevant information, rely on your expertise"
+                    "\n5. Maintain your classroom presence and teaching style throughout"
+                    "\n6. For academic sources, explain their relevance to the class topic"
+                    "\n\nThe reference materials are:"
+                    f"\n\n{search_context}"
+                )
+                
+                # Add thinking reminder only for local models
+                if request.model_type == "local":
+                    search_system_message += "\n\nRemember to include your thinking in <think> tags before your final classroom response."
+                
+                system_message += "\n\n" + search_system_message
 
         # Update knowledge graph with professor data
         
@@ -272,7 +473,16 @@ async def chat(request: ChatRequest):
                 
                 if response.status_code == 200:
                     response_json = response.json()
-                    return {"response": response_json["choices"][0]["message"]["content"]}
+                    raw_response = response_json["choices"][0]["message"]["content"]
+                    
+                    # Process thinking content for local models
+                    processed_response = process_thinking_content(raw_response)
+                    
+                    return {
+                        "response": raw_response,  # Keep original response with thinking tags
+                        "search_results": search_results if search_results else None,
+                        "has_thinking": processed_response["has_thinking"]
+                    }
                 else:
                     error_msg = f"LM Studio error: Status {response.status_code}, Response: {response.text}"
                     print(error_msg)
@@ -297,23 +507,34 @@ async def chat(request: ChatRequest):
                     {"role": "user", "content": request.message}
                 ]
                 
-                if search_context:
-                    messages.insert(1, {
-                        "role": "system",
-                        "content": "When using the search results, please explicitly cite sources using [Source X] notation and structure your response clearly with sections and bullet points."
-                    })
-                
                 response = client.chat.completions.create(
                     model="gpt-4o-mini",  # Using a more capable model
                     messages=messages,
                     temperature=0.85
                 )
                 
-                return {
-                    "response": response.choices[0].message.content,
-                    "search_results": search_results if search_results else None,
-                    "citations": [f"{source['title']} - {source['link']}" for source in search_results] if search_results else None
-                }
+                # Format citations in a more readable way for the frontend
+                if search_results:
+                    response_text = response.choices[0].message.content
+                    
+                    # Process for lecture formatting
+                    lecture_processed = process_lecture_formatting(response_text)
+                    
+                    return {
+                        "response": lecture_processed["formatted_text"],
+                        "search_results": search_results,
+                        "lecture_components": lecture_processed["lecture_components"]
+                    }
+                else:
+                    response_text = response.choices[0].message.content
+                    
+                    # Process for lecture formatting
+                    lecture_processed = process_lecture_formatting(response_text)
+                    
+                    return {
+                        "response": lecture_processed["formatted_text"],
+                        "lecture_components": lecture_processed["lecture_components"]
+                    }
             except Exception as e:
                 print(f"OpenAI error: {str(e)}")
                 raise HTTPException(status_code=500, detail=f"OpenAI error: {str(e)}")
@@ -396,9 +617,35 @@ async def document_chat(request: DocumentChatRequest):
         if len(document_text) > max_chars:
             document_text = document_text[:max_chars] + "...(content truncated due to length)"
         
+        # Create classroom-oriented system prompt
+        classroom_system_prompt = f"""You are a professor leading a class discussion about the document titled '{request.document_title}'.
+        
+CLASSROOM ENVIRONMENT:
+- You are in a classroom with students discussing this document as a learning resource
+- You reference specific parts of the document when answering questions
+- You use a professional yet engaging teaching tone
+- You might occasionally ask rhetorical questions to emphasize important points
+- When appropriate, you relate concepts in the document to broader academic contexts
+
+YOUR APPROACH:
+- Begin by acknowledging the student's question about the document
+- Reference specific sections, pages, or paragraphs from the document to support your explanations
+- Use phrases like "In this document, we can see..." or "The author addresses this on page X..."
+- If the document has data or figures, explain them in an educational context
+- Connect the document's content to classroom learning objectives
+- Be honest if the document doesn't address a particular question
+
+RESPONSE FORMAT:
+- Address the student directly as if in a classroom setting
+- Structure your response clearly and pedagogically
+- Cite specific parts of the document when relevant
+- Consider using an introduction, main points, and conclusion format
+- Wrap up with suggestions for further exploration if appropriate
+"""
+        
         # Build context from previous messages
         messages = [
-            {"role": "system", "content": f"You are a helpful assistant analyzing the document '{request.document_title}'. Provide accurate information based on the document content. If you don't know something or it's not in the document, be honest about it."}
+            {"role": "system", "content": classroom_system_prompt}
         ]
         
         # Add previous conversation context
@@ -408,18 +655,26 @@ async def document_chat(request: DocumentChatRequest):
         # Add the document content and user's question
         messages.append({
             "role": "user", 
-            "content": f"Here is the content of the document '{request.document_title}':\n\n{document_text}\n\nUser question: {request.message}\n\nPlease provide a helpful response based on the document content."
+            "content": f"Here is the content of the document '{request.document_title}':\n\n{document_text}\n\nStudent question: {request.message}\n\nPlease respond as if we're discussing this document in class."
         })
         
         # Get response from OpenAI
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # Using 3.5 turbo for faster responses and lower token usage
+            model="gpt-4o-mini",  # Using a more capable model for document analysis
             messages=messages,
             temperature=0.7,
             max_tokens=1000
         )
         
-        return {"response": response.choices[0].message.content}
+        response_text = response.choices[0].message.content
+        
+        # Process for lecture formatting
+        lecture_processed = process_lecture_formatting(response_text)
+        
+        return {
+            "response": lecture_processed["formatted_text"],
+            "lecture_components": lecture_processed["lecture_components"]
+        }
     
     except Exception as e:
         print(f"Error in document_chat: {str(e)}")
@@ -555,6 +810,277 @@ async def cancel_booking(booking_id: str):
         "status": "success",
         "message": "Booking cancelled successfully"
     }
+
+# Create document storage directory if it doesn't exist
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Document storage (would be a database in production)
+documents_db = []
+
+class DocumentResponse(BaseModel):
+    document_id: str
+    filename: str
+    file_path: str
+    title: str
+    description: str
+    message: str
+
+@app.post("/api/upload", response_model=DocumentResponse)
+async def upload_document(
+    file: UploadFile = File(None),
+    youtube_url: str = Form(None),
+    title: str = Form(None),
+    description: str = Form(None)
+):
+    """
+    Upload a document for classroom use or process a YouTube URL.
+    Supports PDF, DOCX, TXT, and other educational materials.
+    """
+    try:
+        document_id = str(uuid.uuid4())
+        
+        if file and file.filename:
+            # Handle file upload
+            file_extension = os.path.splitext(file.filename)[1].lower()
+            allowed_extensions = ['.pdf', '.docx', '.doc', '.txt', '.ppt', '.pptx', '.xls', '.xlsx']
+            
+            if file_extension not in allowed_extensions:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"
+                )
+            
+            # Save the file
+            safe_filename = f"{document_id}{file_extension}"
+            file_path = os.path.join(UPLOAD_DIR, safe_filename)
+            
+            with open(file_path, "wb") as buffer:
+                buffer.write(await file.read())
+            
+            # Process different file types
+            content_preview = ""
+            if file_extension == '.pdf':
+                # Extract first few pages as preview
+                try:
+                    with pdfplumber.open(file_path) as pdf:
+                        for i, page in enumerate(pdf.pages[:3]):  # First 3 pages
+                            if i == 0:  # Use first page for title if not provided
+                                extracted_text = page.extract_text() or ""
+                                if not title and extracted_text:
+                                    # Extract first line as title if not provided
+                                    first_line = extracted_text.split('\n')[0][:100]
+                                    title = first_line or "Untitled PDF"
+                            
+                            page_text = page.extract_text() or ""
+                            content_preview += f"Page {i+1}:\n{page_text[:300]}...\n\n"
+                except Exception as e:
+                    content_preview = f"Could not extract PDF preview: {str(e)}"
+            elif file_extension in ['.docx', '.doc']:
+                content_preview = "Word document uploaded (preview not available)"
+            elif file_extension == '.txt':
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    content_preview = f.read(500) + "..."
+            else:
+                content_preview = f"{file_extension.upper()[1:]} file uploaded"
+            
+            # Use filename as title if not provided
+            if not title:
+                title = os.path.splitext(file.filename)[0]
+                
+            document_info = {
+                "document_id": document_id,
+                "filename": file.filename,
+                "file_path": file_path,
+                "title": title or "Untitled Document",
+                "description": description or "No description provided",
+                "content_preview": content_preview,
+                "upload_time": time.time(),
+                "type": "file"
+            }
+            
+            documents_db.append(document_info)
+            
+            return {
+                "document_id": document_id,
+                "filename": file.filename,
+                "file_path": file_path,
+                "title": title or "Untitled Document",
+                "description": description or "No description provided",
+                "message": "File uploaded successfully"
+            }
+            
+        elif youtube_url:
+            # Handle YouTube URL processing
+            # This would typically involve YouTube transcript extraction
+            # For now, we'll just store the URL
+            
+            if not title:
+                title = f"YouTube Resource: {youtube_url.split('?v=')[-1]}"
+                
+            document_info = {
+                "document_id": document_id,
+                "filename": "youtube_video",
+                "file_path": youtube_url,  # Store the URL as the path
+                "title": title,
+                "description": description or "YouTube video resource",
+                "content_preview": f"YouTube video: {youtube_url}",
+                "upload_time": time.time(),
+                "type": "youtube"
+            }
+            
+            documents_db.append(document_info)
+            
+            return {
+                "document_id": document_id,
+                "filename": "youtube_video",
+                "file_path": youtube_url,
+                "title": title,
+                "description": description or "YouTube video resource",
+                "message": "YouTube URL processed successfully"
+            }
+        else:
+            raise HTTPException(status_code=400, detail="No file or YouTube URL provided")
+    
+    except Exception as e:
+        print(f"Error in document upload: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+@app.get("/api/documents")
+async def list_documents():
+    """List all available classroom documents"""
+    return {"documents": documents_db}
+
+@app.get("/api/documents/{document_id}")
+async def get_document(document_id: str):
+    """Get a specific document by ID"""
+    document = next((doc for doc in documents_db if doc["document_id"] == document_id), None)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return document
+
+# Find and update the YouTube chat endpoint
+@app.post("/api/youtube-chat")
+async def youtube_chat(request: YoutubeChatRequest):
+    try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        # Fetch YouTube transcript (simplified here)
+        transcript_text = get_youtube_transcript(request.youtube_url)
+        
+        if not transcript_text or transcript_text.startswith("Error"):
+            return {"response": "I couldn't extract the transcript from this YouTube video. It might not have captions available or might be in an unsupported format."}
+        
+        # Truncate text if too long
+        max_chars = 50000  # Adjust based on token limits
+        if len(transcript_text) > max_chars:
+            transcript_text = transcript_text[:max_chars] + "...(transcript truncated due to length)"
+        
+        # Create classroom-oriented system prompt for YouTube discussions
+        classroom_system_prompt = f"""You are a professor leading a class discussion about a YouTube video titled '{request.video_title}'.
+        
+CLASSROOM ENVIRONMENT:
+- You are in a classroom with students discussing this educational video as a learning resource
+- You reference specific parts of the video and transcript when answering questions
+- You use a professional yet engaging teaching tone
+- You might occasionally ask rhetorical questions to emphasize important points
+- When appropriate, you relate concepts in the video to broader academic contexts
+
+YOUR APPROACH:
+- Begin by acknowledging the student's question about the video
+- Reference specific timestamps, quotes, or sections from the video/transcript to support your explanations
+- Use phrases like "In this video, the presenter explains..." or "At around [timestamp], we can see..."
+- Explain complex concepts from the video in an accessible, educational manner
+- Connect the video's content to classroom learning objectives
+- Be honest if the video doesn't address a particular question
+
+RESPONSE FORMAT:
+- Address the student directly as if in a classroom setting
+- Structure your response clearly and pedagogically
+- Cite specific parts of the video transcript when relevant
+- Consider using an introduction, main points, and conclusion format
+- Wrap up with suggestions for further exploration if appropriate
+"""
+        
+        # Build context from previous messages
+        messages = [
+            {"role": "system", "content": classroom_system_prompt}
+        ]
+        
+        # Add previous conversation context
+        for msg in request.previous_messages:
+            messages.append({"role": msg["role"], "content": msg["content"]})
+        
+        # Add the video transcript and user's question
+        messages.append({
+            "role": "user", 
+            "content": f"Here is the transcript of the YouTube video '{request.video_title}' ({request.youtube_url}):\n\n{transcript_text}\n\nStudent question: {request.message}\n\nPlease respond as if we're discussing this video in class."
+        })
+        
+        # Get response from OpenAI
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # Using a more capable model for video analysis
+            messages=messages,
+            temperature=0.7,
+            max_tokens=1000
+        )
+        
+        response_text = response.choices[0].message.content
+        
+        # Process for lecture formatting
+        lecture_processed = process_lecture_formatting(response_text)
+        
+        return {
+            "response": lecture_processed["formatted_text"],
+            "lecture_components": lecture_processed["lecture_components"]
+        }
+    
+    except Exception as e:
+        print(f"Error in youtube_chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing YouTube chat: {str(e)}")
+
+def get_youtube_transcript(youtube_url: str) -> str:
+    """
+    Extract transcript from a YouTube video URL.
+    
+    Args:
+        youtube_url: YouTube video URL
+        
+    Returns:
+        Transcript text or error message
+    """
+    try:
+        # Extract video ID from URL
+        parsed_url = urlparse(youtube_url)
+        
+        if parsed_url.netloc == 'youtu.be':
+            video_id = parsed_url.path.lstrip('/')
+        else:
+            # For youtube.com URLs
+            if 'v' in parse_qs(parsed_url.query):
+                video_id = parse_qs(parsed_url.query)['v'][0]
+            else:
+                return "Error: Could not extract video ID from URL"
+        
+        # Get transcript
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+        
+        # Format transcript with timestamps
+        formatted_transcript = ""
+        for entry in transcript_list:
+            # Convert seconds to MM:SS format
+            minutes = int(entry['start'] / 60)
+            seconds = int(entry['start'] % 60)
+            timestamp = f"[{minutes:02d}:{seconds:02d}]"
+            
+            # Add entry with timestamp
+            formatted_transcript += f"{timestamp} {entry['text']}\n"
+        
+        return formatted_transcript
+        
+    except Exception as e:
+        print(f"Error extracting YouTube transcript: {str(e)}")
+        return f"Error: {str(e)}"
 
 if __name__ == "__main__":
     import uvicorn

@@ -59,7 +59,7 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
   // Dummy professor list
   const professors = [
     { 
-      name: 'Dr. Smith', 
+      name: 'Prof. Terrence Tao', 
       field: 'Mathematics',
       specialty: 'Advanced Calculus',
       availability: '24/7',
@@ -67,7 +67,7 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
       icon: BookOpen,
     },
     { 
-      name: 'Prof. Johnson', 
+      name: 'Prof. Lisa Randall', 
       field: 'Physics',
       specialty: 'Quantum Mechanics',
       availability: '24/7',
@@ -75,7 +75,7 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
       icon: Lightbulb,
     },
     { 
-      name: 'Dr. Williams', 
+      name: 'Prof. David Malan', 
       field: 'Computer Science',
       specialty: 'Machine Learning',
       availability: '24/7',
