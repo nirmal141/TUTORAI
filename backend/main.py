@@ -28,7 +28,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 import asyncio
 import re
 
-from pinecone import Pinecone
+# from pinecone import Pinecone
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings  # Change this if using a different embedding model
 from openai import OpenAI
@@ -101,11 +101,11 @@ LM_STUDIO_HEADERS = {
 }
 
 # Initialize pinecone
-pc = Pinecone(
-    api_key=os.getenv("PINECONE_API_KEY")
-)
-index = pc.Index(os.getenv("INDEX_NAME"))
-embedder = OpenAIEmbeddings()
+# pc = Pinecone(
+#     api_key=os.getenv("PINECONE_API_KEY")
+# )
+# index = pc.Index(os.getenv("INDEX_NAME"))
+# embedder = OpenAIEmbeddings()
 
 async def get_web_search_results(query: str, professor: dict, num_results: int = 5):
     try:
@@ -1119,8 +1119,8 @@ async def add_to_rag(file: UploadFile = File(...)):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "main:app",
-        host="0.0.0.0",  
+        "app.main:app",
+        host="0.0.0.0",
         port=8000,
-        reload=True  
+        reload=True
     ) 
