@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { uploadFile, deleteDocument, getFileUrl, listDocuments, logDocumentAccess } from '@/lib/supabase';
 import { supabase } from '@/lib/supabase';
 import type { Document, DocumentType, SubjectType, Profile } from '@/lib/supabase';
-import { getApiUrl } from '../utils/api';
 
 interface Resource extends Document {
   access_logs?: {
@@ -285,7 +284,7 @@ export default function ResourcesPage() {
       console.log('Processing document chat for URL:', documentUrl);
 
       // Call backend API
-      const response = await fetch(getApiUrl('/api/document-chat'), {
+      const response = await fetch('http://localhost:8000/api/document-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

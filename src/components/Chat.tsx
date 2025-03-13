@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Switch } from '@headlessui/react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { getApiUrl } from '../utils/api';
 
 // Add interface for search source
 interface SearchSource {
@@ -368,7 +367,7 @@ Let's make this a productive learning session!`
     setShowConversationModal(true);
 
     try {
-      const response = await fetch(getApiUrl('/api/chat'), {
+      const response = await fetch('http://localhost:8000/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -516,7 +515,7 @@ Let's make this a productive learning session!`
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(getApiUrl('/api/upload'), {
+      const response = await fetch('http://localhost:8000/api/upload', {
         method: 'POST',
         body: formData,
       });
@@ -573,7 +572,7 @@ Let's make this a productive learning session!`
 
     try {
       setUploadingFile(true);
-      const response = await fetch(getApiUrl('/api/upload'), {
+      const response = await fetch('http://localhost:8000/api/upload', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -771,7 +770,7 @@ Let's make this a productive learning session!`
           console.log(`Processing document chat for document: ${activeDoc.name} (${currentDocumentId})`);
           
           // Get document URL from server
-          const docResponse = await fetch(getApiUrl(`/api/documents/${currentDocumentId}`));
+          const docResponse = await fetch(`http://localhost:8000/api/documents/${currentDocumentId}`);
           
           if (!docResponse.ok) {
             throw new Error('Could not retrieve document information');
@@ -781,7 +780,7 @@ Let's make this a productive learning session!`
           const documentUrl = docData.file_path;
           
           // Call document-chat endpoint
-          const response = await fetch(getApiUrl('/api/document-chat'), {
+          const response = await fetch('http://localhost:8000/api/document-chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -802,7 +801,7 @@ Let's make this a productive learning session!`
         }
       } else {
         // Use regular chat API if no document is active
-        const response = await fetch(getApiUrl('/api/chat'), {
+        const response = await fetch('http://localhost:8000/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
