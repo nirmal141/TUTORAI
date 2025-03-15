@@ -15,14 +15,16 @@ import InstitutionsPage from './pages/InstitutionsPage';
 import Login from './components/Login';
 import Register from './components/Register';
 import { AuthProvider } from './lib/auth-context';
+import { LanguageProvider } from './lib/language-context';
+import { useLanguage } from './lib/language-context';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Debug: Check if this file renders
 console.log("App.tsx is rendering");
 
-function AppContent() {
-  console.log("AppContent rendered");
-
+function AppRoutes() {
+  console.log("AppRoutes rendered");
+  const { t } = useLanguage();
   const [selectedProfessor, setSelectedProfessor] = useState<SelectedProfessor | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isChatExpanded, setIsChatExpanded] = useState(false);
@@ -153,13 +155,13 @@ function AppContent() {
       {/* Unauthorized page */}
       <Route path="/unauthorized" element={
         <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 dark:bg-zinc-900 p-4">
-          <h1 className="text-2xl font-bold mb-2">Unauthorized Access</h1>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-6">You don't have permission to access this page.</p>
+          <h1 className="text-2xl font-bold mb-2">{t('error.unauthorized')}</h1>
+          <p className="text-zinc-600 dark:text-zinc-400 mb-6">{t('error.permission')}</p>
           <button 
             onClick={() => window.history.back()} 
             className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-md"
           >
-            Go Back
+            {t('error.go_back')}
           </button>
         </div>
       } />
@@ -174,10 +176,12 @@ export default function App() {
   console.log("App component is rendering");
 
   return (
-    <Router>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </Router>
+    <AuthProvider>
+      <LanguageProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </LanguageProvider>
+    </AuthProvider>
   );
 }

@@ -4,11 +4,13 @@ import { User, GraduationCap, Book, Users, Settings, FileText, Cpu, Building } f
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
+import { useLanguage } from '@/lib/language-context';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [collapsed, setCollapsed] = useState(false);
   
   const isTeacherOrAdmin = user?.role === 'teacher' || user?.role === 'institution_admin';
@@ -16,51 +18,51 @@ export default function Sidebar() {
   
   const navigation = [
     { 
-      name: 'Dashboard', 
+      name: t('nav.dashboard'), 
       href: '/', 
       icon: User, 
       current: location.pathname === '/' 
     },
     { 
-      name: 'Professor Dashboard', 
+      name: t('nav.professor_dashboard'), 
       href: '/professor-dashboard', 
       icon: GraduationCap, 
       current: location.pathname === '/professor-dashboard',
       show: isTeacherOrAdmin
     },
     { 
-      name: 'Courses', 
+      name: t('nav.courses'), 
       href: '/courses', 
       icon: Book, 
       current: location.pathname === '/courses' 
     },
     { 
-      name: 'Professors', 
+      name: t('nav.professors'), 
       href: '/professors', 
       icon: Users, 
       current: location.pathname === '/professors' 
     },
     { 
-      name: 'Resources', 
+      name: t('nav.resources'), 
       href: '/resources', 
       icon: FileText, 
       current: location.pathname === '/resources' 
     },
     { 
-      name: 'Models', 
+      name: t('nav.models'), 
       href: '/models', 
       icon: Cpu, 
       current: location.pathname === '/models' 
     },
     { 
-      name: 'Institutions', 
+      name: t('nav.institutions'), 
       href: '/institutions', 
       icon: Building, 
       current: location.pathname === '/institutions',
       show: isInstitutionAdmin
     },
     { 
-      name: 'Settings', 
+      name: t('nav.settings'), 
       href: '/settings', 
       icon: Settings, 
       current: location.pathname === '/settings' 

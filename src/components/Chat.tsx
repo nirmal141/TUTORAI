@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Switch } from '@headlessui/react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { useLanguage } from '@/lib/language-context';
 
 // Add interface for search source
 interface SearchSource {
@@ -72,9 +73,10 @@ interface SearchState {
   query: string;
 }
 
-// Add this component at the top level of your file
+// Update the SourcesBox component to use translations
 export const SourcesBox = ({ sources }: { sources: SearchSource[] }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <motion.div
@@ -89,7 +91,7 @@ export const SourcesBox = ({ sources }: { sources: SearchSource[] }) => {
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4 text-blue-400" />
           <span className="text-blue-400 text-sm font-medium">
-            {sources.length} Academic Sources Found
+            {sources.length} {t('chat.academic_sources')}
           </span>
         </div>
         <motion.div
@@ -192,7 +194,7 @@ interface UploadResponse {
   message: string;
 }
 
-// Add new DocumentsPanel component
+// Update the DocumentsPanel component to use translations
 export const DocumentsPanel = ({ 
   documents, 
   activeDocumentId, 
@@ -205,6 +207,7 @@ export const DocumentsPanel = ({
   onRemoveDocument: (docId: string) => void
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <motion.div
@@ -219,7 +222,7 @@ export const DocumentsPanel = ({
         <div className="flex items-center gap-2">
           <File className="h-4 w-4 text-blue-400" />
           <span className="text-blue-400 text-sm font-medium">
-            {documents.length} Document{documents.length !== 1 ? 's' : ''} Available
+            {documents.length} {documents.length !== 1 ? t('chat.documents') : t('chat.document')} {t('chat.available')}
           </span>
         </div>
         <motion.div
@@ -310,6 +313,7 @@ export default function Chat({ selectedProfessor, initialPrompt, onClose, isExpa
     loadChatHistory,
     startNewChat,
   } = useChatHistory();
+  const { t } = useLanguage();
 
   const initialBotMessage: Message = {
     id: 1,
@@ -897,7 +901,7 @@ Let's make this a productive learning session!`
         <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '600ms' }}></div>
       </div>
       <div className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent font-medium">
-        Searching the web for relevant information...
+        {t('chat.searching_web')}
       </div>
       <div className="w-full h-1 bg-zinc-800 rounded-full mt-2 overflow-hidden">
         <div className="search-progress-bar h-full w-full bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full transform -translate-x-full animate-search-progress"></div>
@@ -931,7 +935,7 @@ Let's make this a productive learning session!`
         }}
         transition={{ duration: 0.2 }}
       >
-        <span className="text-sm font-medium">Web Search</span>
+        <span className="text-sm font-medium">{t('chat.web_search')}</span>
         <Globe className="h-4 w-4" />
       </motion.div>
     </div>
@@ -952,7 +956,9 @@ Let's make this a productive learning session!`
         className="bg-gradient-to-b from-zinc-900 to-zinc-950 rounded-xl p-6 max-w-md w-full mx-4 border border-blue-500/20 shadow-xl"
       >
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">Upload Content</h3>
+          <h3 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+            {t('chat.upload_content')}
+          </h3>
           <button
             onClick={() => setShowUploadModal(false)}
             className="text-zinc-400 hover:text-white transition-colors"
@@ -967,7 +973,9 @@ Let's make this a productive learning session!`
         {/* Show existing documents */}
         {uploadedDocuments.length > 0 && (
           <div className="mb-6">
-            <h4 className="text-sm font-medium text-zinc-400 mb-2">Uploaded Documents ({uploadedDocuments.length})</h4>
+            <h4 className="text-sm font-medium text-zinc-400 mb-2">
+              {t('chat.uploaded_documents')} ({uploadedDocuments.length})
+            </h4>
             <div className="space-y-2 max-h-36 overflow-y-auto pr-2 custom-scrollbar">
               {uploadedDocuments.map(doc => (
                 <div key={doc.id} className={`p-2 rounded-lg flex items-center gap-2 ${currentDocumentId === doc.id ? 'bg-blue-500/20' : 'bg-zinc-800/50'}`}>
@@ -980,7 +988,7 @@ Let's make this a productive learning session!`
                   <button
                     onClick={() => handleSelectDocument(doc.id)}
                     className={`p-1 rounded-md ${currentDocumentId === doc.id ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-400 hover:bg-zinc-700/50 hover:text-blue-400'}`}
-                    title={currentDocumentId === doc.id ? 'Active document' : 'Activate document'}
+                    title={currentDocumentId === doc.id ? t('chat.active_document') : t('chat.activate_document')}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -989,7 +997,7 @@ Let's make this a productive learning session!`
                   <button
                     onClick={() => handleRemoveDocument(doc.id)}
                     className="p-1 text-zinc-500 hover:text-red-400 rounded-md hover:bg-zinc-700/50"
-                    title="Remove document"
+                    title={t('chat.remove_document')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1008,7 +1016,7 @@ Let's make this a productive learning session!`
             <div className="flex items-center justify-between mb-3">
               <span className="text-blue-400 flex items-center gap-2 font-medium">
                 <FileText className="h-4 w-4" />
-                Upload Document
+                {t('chat.upload_document')}
               </span>
             </div>
             <input
@@ -1026,7 +1034,7 @@ Let's make this a productive learning session!`
                 file:cursor-pointer file:transition-opacity
                 ${uploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
-            <p className="text-xs text-blue-400/60 mt-2">Supported formats: PDF, DOCX</p>
+            <p className="text-xs text-blue-400/60 mt-2">{t('chat.supported_formats')}: PDF, DOCX</p>
           </motion.div>
 
           {/* YouTube URL Section */}
@@ -1037,14 +1045,14 @@ Let's make this a productive learning session!`
             <div className="flex items-center justify-between mb-3">
               <span className="text-blue-400 flex items-center gap-2 font-medium">
                 <Youtube className="h-4 w-4" />
-                YouTube Video
+                {t('chat.youtube_video')}
               </span>
             </div>
             <form onSubmit={handleYoutubeUpload} className="flex gap-2">
               <input
                 type="url"
                 ref={youtubeInputRef}
-                placeholder="Paste YouTube URL"
+                placeholder={t('chat.paste_youtube_url')}
                 disabled={uploadingFile}
                 className={`flex-1 px-3 py-2 bg-zinc-800/80 border border-blue-500/20 rounded-lg text-blue-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50
                   ${uploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -1055,7 +1063,7 @@ Let's make this a productive learning session!`
                 className={`px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-400 text-white rounded-lg transition-all
                   ${uploadingFile ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:shadow-blue-500/20'}`}
               >
-                Process
+                {t('chat.process')}
               </button>
             </form>
           </motion.div>
@@ -1068,8 +1076,8 @@ Let's make this a productive learning session!`
               <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-cyan-400 animate-spin animation-delay-150"></div>
               <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-blue-300 animate-spin animation-delay-300"></div>
             </div>
-            <span className="text-blue-400 font-medium">Processing your content...</span>
-            <p className="text-xs text-blue-400/60 mt-1">This may take a moment</p>
+            <span className="text-blue-400 font-medium">{t('chat.processing_content')}</span>
+            <p className="text-xs text-blue-400/60 mt-1">{t('chat.this_may_take_a_moment')}</p>
           </div>
         )}
         
@@ -1079,7 +1087,7 @@ Let's make this a productive learning session!`
               onClick={() => setShowUploadModal(false)}
               className="w-full py-2 px-4 bg-gradient-to-r from-blue-600 to-cyan-400 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/20 transition-all"
             >
-              Done
+              {t('chat.done')}
             </button>
           </div>
         )}
@@ -1100,7 +1108,7 @@ Let's make this a productive learning session!`
   const DocumentBadge = ({ documentName }: { documentName: string }) => (
     <div className="text-xs text-blue-400 opacity-70 mb-1 flex items-center gap-1">
       <FileText className="h-3 w-3" />
-      <span>Using document: {documentName}</span>
+      <span>{t('chat.using_document')}: {documentName}</span>
     </div>
   );
 
@@ -1108,7 +1116,7 @@ Let's make this a productive learning session!`
   const WebSearchBadge = () => (
     <div className="text-xs text-blue-400 opacity-70 mb-1 flex items-center gap-1">
       <Globe className="h-3 w-3" />
-      <span>Results from web search</span>
+      <span>{t('chat.results_from_web_search')}</span>
     </div>
   );
 
@@ -1135,7 +1143,7 @@ Let's make this a productive learning session!`
             size="icon"
             onClick={() => setShowHistory(true)}
             className="rounded-md h-9 w-9 p-0"
-            title="Chat History"
+            title={t('chat.chat_history')}
           >
             <Clock className="h-4 w-4" />
           </Button>
@@ -1145,7 +1153,7 @@ Let's make this a productive learning session!`
               size="icon"
               onClick={() => setShowUploadModal(true)}
               className="rounded-md h-9 w-9 p-0"
-              title="Upload Document"
+              title={t('chat.upload_document')}
             >
               <Upload className="h-4 w-4" />
             </Button>
@@ -1161,7 +1169,7 @@ Let's make this a productive learning session!`
             size="icon"
             onClick={onToggleExpand}
             className="rounded-md h-9 w-9 p-0"
-            title={isExpanded ? "Collapse" : "Expand"}
+            title={isExpanded ? t('chat.minimize') : t('chat.maximize')}
           >
             {isExpanded ? (
               <Minimize2 className="h-4 w-4" />
@@ -1174,7 +1182,7 @@ Let's make this a productive learning session!`
             size="icon"
             onClick={onClose}
             className="rounded-md h-9 w-9 p-0"
-            title="Close Chat"
+            title={t('chat.close')}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -1301,8 +1309,8 @@ Let's make this a productive learning session!`
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={currentDocumentId 
-              ? "Ask a question about the document..." 
-              : "Type your message..."}
+              ? `${t('chat.ask_about_document')}` 
+              : t('chat.message_placeholder')}
             className="flex-1"
           />
           <Button 
@@ -1315,7 +1323,7 @@ Let's make this a productive learning session!`
             ) : (
               <Send className="h-4 w-4" />
             )}
-            <span className="sr-only">Send message</span>
+            <span className="sr-only">{t('chat.send')}</span>
           </Button>
         </div>
       </form>
@@ -1336,7 +1344,9 @@ Let's make this a productive learning session!`
               className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-800 w-[480px] max-h-[80vh] overflow-hidden"
             >
               <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
-                <h3 className="text-lg font-medium">Chat History</h3>
+                <h3 className="text-lg font-medium">
+                  {t('chat.chat_history')}
+                </h3>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1352,7 +1362,9 @@ Let's make this a productive learning session!`
                     <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
                       <MessageSquare className="h-6 w-6 text-zinc-400" />
                     </div>
-                    <p className="text-zinc-500 dark:text-zinc-400">No chat history yet</p>
+                    <p className="text-zinc-500 dark:text-zinc-400">
+                      {t('chat.no_chat_history_yet')}
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -1391,7 +1403,7 @@ Let's make this a productive learning session!`
                   onClick={handleClearChat}
                   className="text-red-500 hover:text-red-600"
                 >
-                  Clear All History
+                  {t('chat.clear_all_history')}
                 </Button>
               </div>
             </motion.div>
