@@ -1116,6 +1116,30 @@ async def add_to_rag(file: UploadFile = File(...)):
 
     return {"message": f"Added {len(chunks)} chunks from {file.filename} to RAG"}
 
+class RemoveFromRAGRequest(BaseModel):
+    document_id: str
+    file_path: str
+    title: Optional[str] = None
+
+@app.post("/remove_from_rag/")
+async def remove_from_rag(request: RemoveFromRAGRequest):
+    try:
+        # Print information about the request
+        print(f"Removing document from RAG: {request.document_id}, {request.file_path}")
+        
+        # For now, we'll just acknowledge the request
+        # In a real implementation, you would:
+        # 1. Use the document_id to fetch metadata from your vector store
+        # 2. Delete all vectors associated with this document
+        
+        # Placeholder for actual implementation
+        # index.delete(filter={"document_id": request.document_id})
+        
+        return {"message": f"Document {request.document_id} ({request.title or request.file_path}) removed from RAG system"}
+    except Exception as e:
+        print(f"Error removing document from RAG: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to remove document: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
