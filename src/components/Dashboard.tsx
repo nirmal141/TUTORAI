@@ -31,7 +31,7 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
     { 
       icon: Users, 
       label: 'AI Professors', 
-      value: '24', 
+      value: '5', 
       change: '+4 this week',
     },
     { 
@@ -43,7 +43,7 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
     { 
       icon: Brain, 
       label: 'Knowledge Base', 
-      value: '2.4TB', 
+      value: '160 GB', 
       change: '+240GB',
     },
   ];
