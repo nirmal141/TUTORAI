@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Brain, FileText, Calendar, ChevronRight } from 'lucide-react';
+import { Brain, FileText, Calendar, ChevronRight, GraduationCap, Search } from 'lucide-react';
 import Chat from './Chat';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface TeachingOptions {
   grade: string;
@@ -67,11 +69,69 @@ export default function ProfessorDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Navigation Tabs */}
+    <div className="min-h-screen bg-gradient-to-b from-zinc-100 to-white dark:from-zinc-800 dark:to-zinc-900">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'radial-gradient(circle at center, currentColor 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+          opacity: 0.15
+        }} />
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* Enhanced Header Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mb-12"
+        >
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex items-center">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center cursor-pointer"
+                onClick={() => navigate('/')}
+              >
+                <GraduationCap className="h-10 w-10 text-zinc-900 dark:text-white" />
+                <div className="ml-3">
+                  <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
+                    TutorAI
+                  </h1>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    Professor Dashboard
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <ThemeToggle />
+              </motion.div>
+              
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                <Input 
+                  type="text" 
+                  placeholder="Search resources..." 
+                  className="pl-10 bg-white/50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all"
+                />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Enhanced Navigation Tabs */}
         <div className="mb-10">
-          <div className="border-b border-zinc-200 dark:border-zinc-800">
+          <motion.div 
+            className="border-b border-zinc-200 dark:border-zinc-800"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
             <div className="flex space-x-8">
               <Button
                 variant="ghost"
@@ -82,14 +142,14 @@ export default function ProfessorDashboard() {
                 }`}
                 onClick={() => {
                   setActiveView('student');
-                  navigate('/');
+                  navigate('/dashboard');
                 }}
               >
                 Student Dashboard
                 {activeView === 'student' && (
                   <motion.div 
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-900 dark:bg-white"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-zinc-500 to-zinc-900 dark:from-zinc-400 dark:to-white"
                   />
                 )}
               </Button>
@@ -109,17 +169,12 @@ export default function ProfessorDashboard() {
                 {activeView === 'professor' && (
                   <motion.div 
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-900 dark:bg-white"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-zinc-500 to-zinc-900 dark:from-zinc-400 dark:to-white"
                   />
                 )}
               </Button>
             </div>
-          </div>
-        </div>
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-4">Professor Dashboard</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">Create customized teaching materials for your students</p>
+          </motion.div>
         </div>
 
         {/* Teaching Mode Selection */}
@@ -150,17 +205,24 @@ export default function ProfessorDashboard() {
               transition={{ duration: 0.2 }}
             >
               <Card 
-                className={`h-full cursor-pointer border-zinc-200 dark:border-zinc-800 transition-all duration-300 ${
+                className={`h-full cursor-pointer border-zinc-200/50 dark:border-zinc-700/50 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 ${
                   options.teachingMode === mode
-                    ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700'
-                    : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                    ? 'border-zinc-300 dark:border-zinc-600'
+                    : 'hover:bg-zinc-50/80 dark:hover:bg-zinc-700/80'
                 }`}
                 onClick={() => setOptions(prev => ({ ...prev, teachingMode: mode as TeachingOptions['teachingMode'] }))}
               >
                 <CardContent className="p-6">
-                  <div className="p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 w-fit mb-4">
-                    <Icon className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
-                  </div>
+                  <motion.div 
+                    whileHover={{ scale: 1.1 }}
+                    className={`p-3 rounded-lg w-fit mb-4 ${
+                      options.teachingMode === mode
+                        ? 'bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-600 dark:to-zinc-500'
+                        : 'bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-700 dark:to-zinc-600'
+                    }`}
+                  >
+                    <Icon className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
+                  </motion.div>
                   <h3 className="text-lg font-semibold mb-2 text-zinc-900 dark:text-white">{label}</h3>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">{desc}</p>
                 </CardContent>
@@ -169,8 +231,14 @@ export default function ProfessorDashboard() {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <Card className="border-zinc-200 dark:border-zinc-800">
+        <motion.form 
+          onSubmit={handleSubmit} 
+          className="space-y-8"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="border-zinc-200/50 dark:border-zinc-700/50 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {/* Grade Selection */}
@@ -179,7 +247,7 @@ export default function ProfessorDashboard() {
                   <select
                     value={options.grade}
                     onChange={(e) => setOptions(prev => ({ ...prev, grade: e.target.value }))}
-                    className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg p-3 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 focus:border-zinc-500 dark:focus:border-zinc-400"
+                    className="w-full bg-white/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 focus:border-zinc-500 dark:focus:border-zinc-400 backdrop-blur-sm"
                   >
                     <option value="">Select Grade</option>
                     {grades.map(grade => (
@@ -194,7 +262,7 @@ export default function ProfessorDashboard() {
                   <select
                     value={options.subject}
                     onChange={(e) => setOptions(prev => ({ ...prev, subject: e.target.value }))}
-                    className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg p-3 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 focus:border-zinc-500 dark:focus:border-zinc-400"
+                    className="w-full bg-white/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 focus:border-zinc-500 dark:focus:border-zinc-400 backdrop-blur-sm"
                   >
                     <option value="">Select Subject</option>
                     {subjects.map(subject => (
@@ -209,7 +277,7 @@ export default function ProfessorDashboard() {
                   <select
                     value={options.language}
                     onChange={(e) => setOptions(prev => ({ ...prev, language: e.target.value }))}
-                    className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg p-3 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 focus:border-zinc-500 dark:focus:border-zinc-400"
+                    className="w-full bg-white/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 focus:border-zinc-500 dark:focus:border-zinc-400 backdrop-blur-sm"
                   >
                     {languages.map(language => (
                       <option key={language} value={language}>{language}</option>
@@ -226,7 +294,7 @@ export default function ProfessorDashboard() {
                       ...prev, 
                       modelType: e.target.value as 'openai' | 'local' 
                     }))}
-                    className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg p-3 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 focus:border-zinc-500 dark:focus:border-zinc-400"
+                    className="w-full bg-white/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 focus:border-zinc-500 dark:focus:border-zinc-400 backdrop-blur-sm"
                   >
                     <option value="openai">OpenAI (Online)</option>
                     <option value="local">LM Studio (Offline)</option>
@@ -240,7 +308,7 @@ export default function ProfessorDashboard() {
                     <select
                       value={options.duration}
                       onChange={(e) => setOptions(prev => ({ ...prev, duration: e.target.value }))}
-                      className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg p-3 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 focus:border-zinc-500 dark:focus:border-zinc-400"
+                      className="w-full bg-white/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 focus:border-zinc-500 dark:focus:border-zinc-400 backdrop-blur-sm"
                     >
                       <option value="">Select Duration</option>
                       {durations.map(duration => (
@@ -251,16 +319,18 @@ export default function ProfessorDashboard() {
                 )}
               </div>
 
-              <Button
-                type="submit"
-                className="w-full md:w-auto px-8 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors flex items-center justify-center space-x-2"
-              >
-                <span>Generate Teaching Material</span>
-                <ChevronRight className="w-5 h-5" />
-              </Button>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  type="submit"
+                  className="w-full md:w-auto px-8 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors flex items-center justify-center space-x-2 backdrop-blur-sm"
+                >
+                  <span>Generate Teaching Material</span>
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
+              </motion.div>
             </CardContent>
           </Card>
-        </form>
+        </motion.form>
 
         {/* Chat Integration */}
         <AnimatePresence>
@@ -273,7 +343,7 @@ export default function ProfessorDashboard() {
                 isChatExpanded
                   ? 'inset-4 w-auto h-auto'
                   : 'bottom-4 right-4 w-[500px] h-[600px]'
-              } bg-white dark:bg-zinc-900 rounded-lg shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden`}
+              } bg-white/80 dark:bg-zinc-900/80 rounded-lg shadow-2xl border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden backdrop-blur-sm`}
             >
               <Chat
                 selectedProfessor={{

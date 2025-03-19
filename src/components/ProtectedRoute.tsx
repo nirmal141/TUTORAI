@@ -39,7 +39,11 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     // try to force create a profile as a last resort
     if (session?.user && !user && timeoutOccurred) {
       console.log("ProtectedRoute: Timeout occurred, forcing profile creation");
-      forceCreateProfile(session.user.id, session.user.email || "user@example.com")
+      forceCreateProfile(
+        session.user.id, 
+        session.user.email || "user@example.com",
+        'student' // Default role
+      )
         .then(() => {
           console.log("ProtectedRoute: Force create profile completed");
           setLocalLoading(false);
@@ -77,10 +81,10 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     return <>{children}</>;
   }
 
-  // If user is not authenticated, redirect to login
+  // If user is not authenticated, redirect to landing page
   if (!session) {
-    console.log("ProtectedRoute: No session, redirecting to login");
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    console.log("ProtectedRoute: No session, redirecting to landing page");
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   // If roles are specified and user's role is not included, redirect to unauthorized page

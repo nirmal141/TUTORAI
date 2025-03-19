@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Brain, Sparkles, Zap, Star, ChevronRight, Search, MessageSquare, Lightbulb, BookOpen, Check } from 'lucide-react';
+import { Users, Brain, Sparkles, Zap, Star, ChevronRight, Search, MessageSquare, Lightbulb, BookOpen, Check, GraduationCap } from 'lucide-react';
 import { SelectedProfessor } from './Chat';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -121,30 +121,51 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header Section */}
+    <div className="min-h-screen bg-gradient-to-b from-zinc-100 to-white dark:from-zinc-800 dark:to-zinc-900">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'radial-gradient(circle at center, currentColor 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+          opacity: 0.15
+        }} />
+      </div>
+
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Enhanced Header Section */}
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
           className="mb-12"
         >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-medium tracking-tight">
-                TutorAI
-              </h1>
-              <p className="text-zinc-500 dark:text-zinc-400 mt-1">
-                Your personal AI learning assistant
-              </p>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex items-center">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center cursor-pointer"
+                onClick={() => navigate('/')}
+              >
+                <GraduationCap className="h-10 w-10 text-zinc-900 dark:text-white" />
+                <div className="ml-3">
+                  <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
+                    TutorAI
+                  </h1>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    Your personal AI learning assistant
+                  </p>
+                </div>
+              </motion.div>
             </div>
             
             <div className="flex items-center gap-3">
-              {/* Theme Toggle */}
-              <ThemeToggle />
+              {/* Theme Toggle with enhanced styling */}
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <ThemeToggle />
+              </motion.div>
               
-              {/* Search Bar */}
+              {/* Enhanced Search Bar */}
               <div className="relative w-full md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                 <Input 
@@ -152,16 +173,21 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
                   placeholder="Search..." 
                   value={searchQuery}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-zinc-100 dark:bg-zinc-800 border-none focus-visible:ring-1 focus-visible:ring-zinc-300 dark:focus-visible:ring-zinc-700"
+                  className="pl-10 bg-white/50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all"
                 />
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Navigation Tabs */}
+        {/* Enhanced Navigation Tabs */}
         <div className="mb-10">
-          <div className="border-b border-zinc-200 dark:border-zinc-800">
+          <motion.div 
+            className="border-b border-zinc-200 dark:border-zinc-800"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
             <div className="flex space-x-8">
               <Button
                 variant="ghost"
@@ -172,14 +198,14 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
                 }`}
                 onClick={() => {
                   setActiveView('student');
-                  navigate('/');
+                  navigate('/dashboard');
                 }}
               >
                 Student Dashboard
                 {activeView === 'student' && (
                   <motion.div 
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-900 dark:bg-white"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-zinc-500 to-zinc-900 dark:from-zinc-400 dark:to-white"
                   />
                 )}
               </Button>
@@ -199,15 +225,15 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
                 {activeView === 'professor' && (
                   <motion.div 
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-900 dark:bg-white"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-zinc-500 to-zinc-900 dark:from-zinc-400 dark:to-white"
                   />
                 )}
               </Button>
             </div>
-          </div>
+          </motion.div>
         </div>
 
-        {/* Stats Grid */}
+        {/* Enhanced Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {stats.map((stat, index) => (
             <motion.div
@@ -215,13 +241,17 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05, duration: 0.3 }}
+              whileHover={{ scale: 1.02 }}
             >
-              <Card className="h-full border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 shadow-sm hover:shadow-md transition-shadow duration-300">
+              <Card className="h-full border-zinc-200/50 dark:border-zinc-700/50 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
                 <CardContent className="p-5">
                   <div className="flex flex-col h-full">
-                    <div className="p-2 rounded-md bg-zinc-100 dark:bg-zinc-700 w-fit mb-3">
-                      <stat.icon className="h-4 w-4 text-zinc-500 dark:text-zinc-300" />
-                    </div>
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      className="p-2 rounded-md bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-700 dark:to-zinc-600 w-fit mb-3"
+                    >
+                      <stat.icon className="h-4 w-4 text-zinc-700 dark:text-zinc-300" />
+                    </motion.div>
                     <div className="flex-grow">
                       <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{stat.label}</p>
                       <h3 className="text-2xl font-semibold mt-1 text-zinc-900 dark:text-white">
@@ -229,7 +259,7 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
                       </h3>
                     </div>
                     <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-700">
-                      <Badge variant="secondary" className="bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 font-normal">
+                      <Badge variant="secondary" className="bg-zinc-100 dark:bg-zinc-700/50 text-zinc-600 dark:text-zinc-300 font-normal backdrop-blur-sm">
                         {stat.change}
                       </Badge>
                     </div>
@@ -240,22 +270,27 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
           ))}
         </div>
 
-        {/* Professors Section */}
+        {/* Enhanced Professors Section */}
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
+          <motion.div 
+            className="flex justify-between items-center"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             <h2 className="text-xl font-medium text-zinc-900 dark:text-white">
               Available Professors
             </h2>
             <Button 
               variant="outline" 
-              className="text-xs gap-1 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md"
+              className="text-xs gap-1 border-zinc-200/50 dark:border-zinc-700/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md backdrop-blur-sm"
               size="sm"
             >
               <Users className="h-3.5 w-3.5" />
               View All
               <ChevronRight className="h-3.5 w-3.5 ml-1" />
             </Button>
-          </div>
+          </motion.div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {professors.map((prof, index) => (
@@ -264,14 +299,18 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + index * 0.05, duration: 0.3 }}
+                whileHover={{ scale: 1.02 }}
                 onClick={() => handleProfessorClick(prof)}
               >
-                <Card className="cursor-pointer border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 hover:shadow-md transition-all duration-300 overflow-hidden group">
+                <Card className="cursor-pointer border-zinc-200/50 dark:border-zinc-700/50 bg-white/80 dark:bg-zinc-800/80 hover:shadow-xl transition-all duration-300 overflow-hidden group backdrop-blur-sm">
                   <CardContent className="p-5">
                     <div className="flex items-start gap-4">
-                      <div className="p-3 rounded-md bg-zinc-100 dark:bg-zinc-700 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-600 transition-colors duration-300">
-                        <prof.icon className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
-                      </div>
+                      <motion.div 
+                        whileHover={{ scale: 1.1 }}
+                        className="p-3 rounded-md bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-700 dark:to-zinc-600 group-hover:from-zinc-200 group-hover:to-zinc-300 dark:group-hover:from-zinc-600 dark:group-hover:to-zinc-500 transition-colors duration-300"
+                      >
+                        <prof.icon className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
+                      </motion.div>
                       <div className="flex-1">
                         <h3 className="font-medium text-zinc-900 dark:text-white group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors duration-300">
                           {prof.name}
@@ -301,9 +340,9 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
         </div>
       </div>
 
-      {/* Professor Selection Modal */}
+      {/* Enhanced Professor Selection Modal */}
       <Dialog open={showSelectModal} onOpenChange={setShowSelectModal}>
-        <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 sm:max-w-md">
+        <DialogContent className="bg-white/80 dark:bg-zinc-900/80 border-zinc-200/50 dark:border-zinc-700/50 text-zinc-900 dark:text-zinc-100 sm:max-w-md backdrop-blur-sm">
           <DialogHeader>
             <DialogTitle className="text-xl font-medium">
               {currentProfessor?.name}
@@ -313,10 +352,10 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
             <div className="space-y-2">
               <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Teaching Mode</p>
               <Select value={teachingMode} onValueChange={setTeachingMode}>
-                <SelectTrigger className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800">
+                <SelectTrigger className="border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50">
                   <SelectValue placeholder="Select teaching mode" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                <SelectContent className="bg-white/80 dark:bg-zinc-900/80 border-zinc-200/50 dark:border-zinc-700/50 backdrop-blur-sm">
                   <SelectItem value="Virtual">Virtual</SelectItem>
                   <SelectItem value="Interactive">Interactive</SelectItem>
                   <SelectItem value="Guided">Guided</SelectItem>
@@ -326,10 +365,10 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
             <div className="space-y-2">
               <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Advice Type</p>
               <Select value={adviceType} onValueChange={setAdviceType}>
-                <SelectTrigger className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800">
+                <SelectTrigger className="border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50">
                   <SelectValue placeholder="Select advice type" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                <SelectContent className="bg-white/80 dark:bg-zinc-900/80 border-zinc-200/50 dark:border-zinc-700/50 backdrop-blur-sm">
                   <SelectItem value="Subject-Specific Advice">Subject-Specific Advice</SelectItem>
                   <SelectItem value="General Learning Tips">General Learning Tips</SelectItem>
                   <SelectItem value="Career Guidance">Career Guidance</SelectItem>
@@ -339,10 +378,10 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
             <div className="space-y-2">
               <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Model Type</p>
               <Select value={modelType} onValueChange={setModelType}>
-                <SelectTrigger className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800">
+                <SelectTrigger className="border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50">
                   <SelectValue placeholder="Select model type" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                <SelectContent className="bg-white/80 dark:bg-zinc-900/80 border-zinc-200/50 dark:border-zinc-700/50 backdrop-blur-sm">
                   <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="anthropic">Anthropic</SelectItem>
                   <SelectItem value="local">Local Model</SelectItem>
@@ -354,7 +393,7 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
             <Button 
               variant="outline" 
               onClick={() => setShowSelectModal(false)}
-              className="border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              className="border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             >
               Cancel
             </Button>
@@ -368,14 +407,14 @@ export default function Dashboard({ onSelectProfessor }: DashboardProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Success Alert */}
+      {/* Enhanced Success Alert */}
       <AnimatePresence>
         {showSuccessAlert && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed bottom-4 right-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-4 py-3 rounded-lg shadow-lg"
+            className="fixed bottom-4 right-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-4 py-3 rounded-lg shadow-lg backdrop-blur-sm"
           >
             <div className="flex items-center gap-2">
               <div className="p-1 bg-white/20 dark:bg-zinc-900/20 rounded-full">

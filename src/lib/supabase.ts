@@ -27,13 +27,13 @@ export type SubjectType = 'mathematics' | 'physics' | 'chemistry' | 'biology' | 
 export type UserRole = 'student' | 'teacher' | 'institution_admin';
 
 // Institution-related types
-export interface Institution {
+export type Institution = {
   id: string;
   name: string;
   domain: string;
   created_at: string;
   updated_at: string;
-}
+};
 
 export interface Profile {
   id: string;

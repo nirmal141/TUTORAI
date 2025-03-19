@@ -14,6 +14,7 @@ import ResourcesPage from './pages/ResourcesPage';
 import InstitutionsPage from './pages/InstitutionsPage';
 import Login from './components/Login';
 import Register from './components/Register';
+import Landing from './components/Landing';
 import { AuthProvider } from './lib/auth-context';
 import { LanguageProvider } from './lib/language-context';
 import { useLanguage } from './lib/language-context';
@@ -46,11 +47,12 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       
       {/* Protected routes */}
-      <Route path="/" element={
+      <Route path="/dashboard" element={
         <ProtectedRoute>
           <Layout>
             <div className="h-full overflow-auto">

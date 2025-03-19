@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useLocation, NavLink } from 'react-router-dom';
-import { User, GraduationCap, Book, Users, Settings, FileText, Cpu, Building } from 'lucide-react';
+import { User, GraduationCap, Book, Users, Settings, FileText, Cpu, Building, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import { useLanguage } from '@/lib/language-context';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Sidebar() {
   const location = useLocation();
@@ -19,9 +20,9 @@ export default function Sidebar() {
   const navigation = [
     { 
       name: t('nav.dashboard'), 
-      href: '/', 
+      href: '/dashboard', 
       icon: User, 
-      current: location.pathname === '/' 
+      current: location.pathname === '/dashboard' 
     },
     { 
       name: t('nav.professor_dashboard'), 
@@ -70,99 +71,112 @@ export default function Sidebar() {
   ];
 
   return (
-    <div
+    <motion.div 
+      initial={false}
+      animate={{ width: collapsed ? 80 : 280 }}
       className={cn(
-        "h-screen border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
+        "relative h-screen bg-white/80 dark:bg-zinc-900/80 border-r border-zinc-200/50 dark:border-zinc-700/50 backdrop-blur-sm",
+        "flex flex-col py-4 transition-all duration-300 ease-in-out"
       )}
     >
-      <div className="flex-1 flex flex-col overflow-y-auto">
-        <div className="flex items-center justify-between h-16 px-4 border-b border-zinc-200 dark:border-zinc-800">
-          <div className={cn("flex items-center", collapsed && "justify-center w-full")}>
-            <span className={cn("text-xl font-semibold text-zinc-900 dark:text-white", collapsed && "hidden")}>
-              TutorAI
-            </span>
-            <span className={cn("text-xl font-semibold text-zinc-900 dark:text-white hidden", collapsed && "block")}>
-              T
-            </span>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setCollapsed(!collapsed)}
-            className={cn("text-zinc-500 dark:text-zinc-400", collapsed && "hidden")}
-          >
-            <svg 
-              className="h-4 w-4" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M11 19l-7-7 7-7m8 14l-7-7 7-7" 
-              />
-            </svg>
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setCollapsed(!collapsed)}
-            className={cn("text-zinc-500 dark:text-zinc-400 hidden", collapsed && "block")}
-          >
-            <svg 
-              className="h-4 w-4" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M13 5l7 7-7 7M5 5l7 7-7 7" 
-              />
-            </svg>
-          </Button>
-        </div>
-        <nav className="flex-1 px-2 py-4 space-y-1">
-          {navigation.filter(item => item.show !== false).map((item) => (
+      {/* Collapse Button */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setCollapsed(!collapsed)}
+        className="absolute -right-4 top-8 p-1.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-lg z-50"
+      >
+        {collapsed ? (
+          <ChevronRight className="w-4 h-4" />
+        ) : (
+          <ChevronLeft className="w-4 h-4" />
+        )}
+      </motion.button>
+
+      {/* Logo */}
+      <div className={cn(
+        "flex items-center px-6 mb-8",
+        collapsed ? "justify-center" : "justify-start"
+      )}>
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex items-center"
+        >
+          <GraduationCap className="h-8 w-8 text-zinc-900 dark:text-white" />
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="ml-3"
+              >
+                <h1 className="text-xl font-bold text-zinc-900 dark:text-white">
+                  TutorAI
+                </h1>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 space-y-1 px-3">
+        {navigation.map((item) => {
+          if (item.show === false) return null;
+          const Icon = item.icon;
+          
+          return (
             <NavLink
               key={item.name}
               to={item.href}
               className={({ isActive }) => cn(
+                "flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+                "hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 backdrop-blur-sm",
                 isActive
-                  ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-white',
-                'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150',
-                collapsed && 'justify-center'
+                  ? "bg-zinc-100/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-white"
+                  : "text-zinc-500 dark:text-zinc-400"
               )}
             >
-              <item.icon
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 className={cn(
-                  'flex-shrink-0 h-5 w-5 mr-3',
-                  collapsed && 'mr-0'
+                  "p-2 rounded-md",
+                  item.current
+                    ? "bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-600 dark:to-zinc-500"
+                    : "bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-700 dark:to-zinc-600"
                 )}
-                aria-hidden="true"
-              />
-              <span className={cn('truncate', collapsed && 'hidden')}>
-                {item.name}
-              </span>
+              >
+                <Icon className="h-5 w-5" />
+              </motion.div>
+              <AnimatePresence>
+                {!collapsed && (
+                  <motion.span
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    className="ml-3"
+                  >
+                    {item.name}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </NavLink>
-          ))}
-        </nav>
-      </div>
+          );
+        })}
+      </nav>
 
-      {/* Footer with theme toggle */}
+      {/* Footer */}
       <div className={cn(
-        "p-3 border-t border-zinc-200 dark:border-zinc-800",
-        collapsed ? "flex justify-center" : "flex items-center justify-between"
+        "mt-auto px-3",
+        collapsed ? "flex justify-center" : ""
       )}>
-        {!collapsed && <span className="text-xs text-zinc-500 dark:text-zinc-400">Theme</span>}
-        <ThemeToggle />
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <ThemeToggle />
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }

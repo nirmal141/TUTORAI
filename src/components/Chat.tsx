@@ -1121,12 +1121,12 @@ Let's make this a productive learning session!`
   );
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
+    <div className="flex flex-col h-full bg-gradient-to-b from-white via-zinc-50/50 to-white dark:from-zinc-900 dark:via-zinc-900/50 dark:to-zinc-900 backdrop-blur-sm">
       {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
+      <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800">
-            <Bot className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700 shadow-inner">
+            <Bot className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
           </div>
           <div>
             <h3 className="font-medium text-zinc-900 dark:text-white">
@@ -1142,7 +1142,7 @@ Let's make this a productive learning session!`
             variant="ghost"
             size="icon"
             onClick={() => setShowHistory(true)}
-            className="rounded-md h-9 w-9 p-0"
+            className="rounded-xl h-9 w-9 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
             title={t('chat.chat_history')}
           >
             <Clock className="h-4 w-4" />
@@ -1152,13 +1152,13 @@ Let's make this a productive learning session!`
               variant="ghost"
               size="icon"
               onClick={() => setShowUploadModal(true)}
-              className="rounded-md h-9 w-9 p-0"
+              className="rounded-xl h-9 w-9 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               title={t('chat.upload_document')}
             >
               <Upload className="h-4 w-4" />
             </Button>
             {uploadedDocuments.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center shadow-lg">
                 {uploadedDocuments.length}
               </span>
             )}
@@ -1168,7 +1168,7 @@ Let's make this a productive learning session!`
             variant="ghost"
             size="icon"
             onClick={onToggleExpand}
-            className="rounded-md h-9 w-9 p-0"
+            className="rounded-xl h-9 w-9 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
             title={isExpanded ? t('chat.minimize') : t('chat.maximize')}
           >
             {isExpanded ? (
@@ -1181,7 +1181,7 @@ Let's make this a productive learning session!`
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="rounded-md h-9 w-9 p-0"
+            className="rounded-xl h-9 w-9 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
             title={t('chat.close')}
           >
             <X className="h-4 w-4" />
@@ -1190,7 +1190,7 @@ Let's make this a productive learning session!`
       </div>
 
       {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         <AnimatePresence initial={false}>
           {uploadedDocuments.length > 0 && (
             <DocumentsPanel 
@@ -1213,11 +1213,14 @@ Let's make this a productive learning session!`
               {message.type === 'search' && message.sources ? (
                 <SourcesBox sources={message.sources} />
               ) : (
-                <div className={`p-4 rounded-lg ${
+                <motion.div 
+                  whileHover={{ scale: 1.01 }}
+                  className={`p-4 rounded-2xl shadow-sm hover:shadow-md transition-all ${
                     message.type === 'user'
-                  ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                } max-w-[80%]`}>
+                      ? 'bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-white dark:to-zinc-100 text-white dark:text-zinc-900'
+                      : 'bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-700 text-zinc-900 dark:text-white'
+                  } max-w-[80%] border border-zinc-200/10 dark:border-zinc-700/10`}
+                >
                   {message.type === 'bot' && message.sources && message.sources.length > 0 && (
                     <WebSearchBadge />
                   )}
@@ -1234,7 +1237,7 @@ Let's make this a productive learning session!`
                     components={{
                       p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
                       a: ({children, href}) => (
-                        <a href={href} className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300" target="_blank" rel="noopener noreferrer">
+                        <a href={href} className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">
                           {children}
                         </a>
                       ),
@@ -1242,12 +1245,12 @@ Let's make this a productive learning session!`
                       ol: ({children}) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
                       li: ({children}) => <li>{children}</li>,
                       code: ({children}) => (
-                        <code className="bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded text-sm">
+                        <code className="bg-zinc-200/50 dark:bg-zinc-700/50 px-1.5 py-0.5 rounded-md text-sm">
                           {children}
                         </code>
                       ),
                       pre: ({children}) => (
-                        <pre className="bg-zinc-200 dark:bg-zinc-700 p-3 rounded-lg overflow-x-auto my-2">
+                        <pre className="bg-zinc-200/50 dark:bg-zinc-700/50 p-3 rounded-xl overflow-x-auto my-2">
                           {children}
                         </pre>
                       ),
@@ -1266,7 +1269,7 @@ Let's make this a productive learning session!`
                       minute: '2-digit' 
                     })}
                   </span>
-                </div>
+                </motion.div>
               )}
             </motion.div>
           ))}
@@ -1274,10 +1277,13 @@ Let's make this a productive learning session!`
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400"
+              className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 bg-zinc-100/50 dark:bg-zinc-800/50 p-3 rounded-xl backdrop-blur-sm"
             >
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">{loadingStates[currentLoadingState]}</span>
+              <div className="relative w-5 h-5">
+                <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-zinc-500 dark:border-zinc-400 animate-spin"></div>
+                <div className="absolute inset-1 rounded-full border-r-2 border-l-2 border-zinc-400 dark:border-zinc-500 animate-spin animation-delay-150"></div>
+              </div>
+              <span className="text-sm font-medium">{loadingStates[currentLoadingState]}</span>
             </motion.div>
           )}
           {searchState.status === 'searching' && (
@@ -1288,16 +1294,16 @@ Let's make this a productive learning session!`
       </div>
 
       {/* Chat Input */}
-      <form onSubmit={handleSend} className="p-4 border-t border-zinc-200 dark:border-zinc-800">
+      <form onSubmit={handleSend} className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm">
         {currentDocumentId && (
-          <div className="mb-2 flex items-center gap-2 p-2 rounded-md bg-blue-500/10 text-blue-400 text-sm">
+          <div className="mb-2 flex items-center gap-2 p-2 rounded-xl bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-500 dark:text-blue-400 text-sm border border-blue-500/20">
             <FileText className="h-4 w-4" />
             <span className="flex-1 truncate">
               {uploadedDocuments.find(doc => doc.id === currentDocumentId)?.name || 'Document active'}
             </span>
             <button 
               onClick={() => setCurrentDocumentId(null)} 
-              className="text-blue-400 hover:text-blue-300"
+              className="text-blue-400 hover:text-blue-300 transition-colors"
               type="button"
             >
               <X className="h-4 w-4" />
@@ -1311,12 +1317,14 @@ Let's make this a productive learning session!`
             placeholder={currentDocumentId 
               ? `${t('chat.ask_about_document')}` 
               : t('chat.message_placeholder')}
-            className="flex-1"
+            className="flex-1 bg-zinc-100/50 dark:bg-zinc-800/50 border-zinc-200/50 dark:border-zinc-700/50 rounded-xl focus:ring-2 focus:ring-zinc-500/50 dark:focus:ring-zinc-400/50 placeholder-zinc-400 dark:placeholder-zinc-500"
           />
           <Button 
             type="submit" 
             disabled={!input.trim() || isGenerating}
-            className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200"
+            className={`rounded-xl bg-gradient-to-r from-zinc-800 to-zinc-900 dark:from-zinc-100 dark:to-white text-white dark:text-zinc-900 hover:shadow-lg transition-all ${
+              isGenerating ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+            }`}
           >
             {isGenerating ? (
               <Loader2 className="h-4 w-4 animate-spin" />

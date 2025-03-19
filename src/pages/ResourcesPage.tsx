@@ -476,29 +476,45 @@ export default function ResourcesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-900">
+    <div className="min-h-screen bg-gradient-to-b from-white via-zinc-50/50 to-white dark:from-zinc-900 dark:via-zinc-900/50 dark:to-zinc-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-4">{t('resources.title')}</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">{t('resources.description')}</p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-12"
+        >
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-zinc-900 to-zinc-700 dark:from-white dark:to-zinc-300 bg-clip-text text-transparent mb-4">
+            {t('resources.title')}
+          </h1>
+          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
+            {t('resources.description')}
+          </p>
+        </motion.div>
 
         {/* Search and Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-col sm:flex-row gap-4 mb-8"
+        >
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
-            <input
-              type="text"
-              placeholder={t('resources.search')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500"
-            />
+            <div className="absolute inset-0 bg-gradient-to-r from-zinc-100 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 rounded-xl blur-xl opacity-50"></div>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+              <input
+                type="text"
+                placeholder={t('resources.search')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50 bg-white/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-zinc-500/20 dark:focus:ring-zinc-400/20 transition-all"
+              />
+            </div>
           </div>
           <select
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value as SubjectType | '')}
-            className="px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+            className="px-4 py-3 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50 bg-white/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500/20 dark:focus:ring-zinc-400/20 transition-all"
           >
             <option value="">{t('resources.all_subjects')}</option>
             <option value="mathematics">{t('resources.mathematics')}</option>
@@ -508,11 +524,16 @@ export default function ResourcesPage() {
             <option value="computer_science">{t('resources.computer_science')}</option>
             <option value="other">{t('resources.other')}</option>
           </select>
-        </div>
+        </motion.div>
 
         {/* Upload Button with Progress */}
-        <div className="mb-6">
-          <label className="inline-flex items-center px-4 py-2 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors cursor-pointer">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-8"
+        >
+          <label className="inline-flex items-center px-6 py-3 rounded-xl bg-gradient-to-r from-zinc-900 to-zinc-800 dark:from-white dark:to-zinc-100 text-white dark:text-zinc-900 hover:shadow-lg hover:shadow-zinc-900/20 dark:hover:shadow-white/20 transition-all cursor-pointer">
             <Upload className="w-5 h-5 mr-2" />
             {isUploading ? `${t('resources.uploading')} ${uploadProgress}%` : t('resources.upload')}
             <input
@@ -524,51 +545,73 @@ export default function ResourcesPage() {
               disabled={isUploading}
             />
           </label>
-        </div>
+        </motion.div>
 
         {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
-            {error}
-          </div>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mb-8 p-4 bg-red-50/80 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/50 rounded-xl text-red-700 dark:text-red-400 backdrop-blur-sm"
+            >
+              {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {isLoading ? (
             // Loading skeleton
             Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm animate-pulse p-6 border border-zinc-200 dark:border-zinc-700">
-                <div className="h-32 bg-zinc-200 dark:bg-zinc-700 rounded-md mb-4"></div>
-                <div className="h-6 bg-zinc-200 dark:bg-zinc-700 rounded-md mb-2 w-3/4"></div>
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded-md mb-4 w-1/2"></div>
-                <div className="h-8 bg-zinc-200 dark:bg-zinc-700 rounded-md"></div>
-              </div>
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-white/80 dark:bg-zinc-800/80 rounded-xl shadow-sm animate-pulse p-6 border border-zinc-200/50 dark:border-zinc-700/50 backdrop-blur-sm"
+              >
+                <div className="h-32 bg-zinc-200/50 dark:bg-zinc-700/50 rounded-lg mb-4"></div>
+                <div className="h-6 bg-zinc-200/50 dark:bg-zinc-700/50 rounded-lg mb-2 w-3/4"></div>
+                <div className="h-4 bg-zinc-200/50 dark:bg-zinc-700/50 rounded-lg mb-4 w-1/2"></div>
+                <div className="h-8 bg-zinc-200/50 dark:bg-zinc-700/50 rounded-lg"></div>
+              </motion.div>
             ))
           ) : resources.length === 0 ? (
             // Empty state
-            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
-              <FileText className="w-16 h-16 text-zinc-300 dark:text-zinc-600 mb-4" />
-              <h3 className="text-xl font-medium text-zinc-900 dark:text-white mb-2">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="col-span-full flex flex-col items-center justify-center py-16 text-center"
+            >
+              <div className="w-20 h-20 rounded-full bg-zinc-100/80 dark:bg-zinc-800/80 flex items-center justify-center mb-6 backdrop-blur-sm">
+                <FileText className="w-10 h-10 text-zinc-400 dark:text-zinc-600" />
+              </div>
+              <h3 className="text-2xl font-medium text-zinc-900 dark:text-white mb-3">
                 {searchQuery || selectedSubject ? t('resources.no_resources_match') : t('resources.no_resources')}
               </h3>
-              <p className="text-zinc-500 dark:text-zinc-400 mb-6">
+              <p className="text-zinc-600 dark:text-zinc-400 max-w-md">
                 {searchQuery || selectedSubject ? '' : t('resources.upload_first')}
               </p>
-            </div>
+            </motion.div>
           ) : (
             // Resources list
-            resources.map((resource) => (
-              <div
+            resources.map((resource, index) => (
+              <motion.div
                 key={resource.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
                 onClick={() => handleOpenDocument(resource)}
-                className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm p-6 border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-all hover:shadow-md"
+                className="group bg-white/80 dark:bg-zinc-800/80 rounded-xl shadow-sm p-6 border border-zinc-200/50 dark:border-zinc-700/50 cursor-pointer transition-all hover:shadow-lg hover:shadow-zinc-900/20 dark:hover:shadow-white/20 backdrop-blur-sm"
               >
                 <div className="flex items-center mb-4">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-md">
+                  <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg group-hover:scale-110 transition-transform">
                     {getFileIcon(resource.type)}
                   </div>
-                  <div className="ml-3 flex-1 truncate">
-                    <h3 className="text-lg font-medium text-zinc-900 dark:text-white truncate">
+                  <div className="ml-4 flex-1 truncate">
+                    <h3 className="text-lg font-medium text-zinc-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       {resource.title}
                     </h3>
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -578,35 +621,35 @@ export default function ResourcesPage() {
                 </div>
                 
                 {/* Resource stats */}
-                <div className="grid grid-cols-3 gap-2 mb-4 text-center text-xs">
-                  <div className="bg-zinc-100 dark:bg-zinc-700/50 rounded-md p-2">
-                    <div className="font-medium text-zinc-800 dark:text-zinc-200">
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="bg-zinc-100/50 dark:bg-zinc-700/50 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div className="font-medium text-zinc-900 dark:text-white">
                       {resource.access_logs?.find(log => log.count)?.count || 0}
                     </div>
-                    <div className="text-zinc-500 dark:text-zinc-400">{t('resources.views')}</div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400">{t('resources.views')}</div>
                   </div>
-                  <div className="bg-zinc-100 dark:bg-zinc-700/50 rounded-md p-2">
-                    <div className="font-medium text-zinc-800 dark:text-zinc-200">
+                  <div className="bg-zinc-100/50 dark:bg-zinc-700/50 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div className="font-medium text-zinc-900 dark:text-white">
                       {resource.access_logs?.find(log => log.count)?.count || 0}
                     </div>
-                    <div className="text-zinc-500 dark:text-zinc-400">{t('resources.downloads')}</div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400">{t('resources.downloads')}</div>
                   </div>
-                  <div className="bg-zinc-100 dark:bg-zinc-700/50 rounded-md p-2">
-                    <div className="font-medium text-zinc-800 dark:text-zinc-200">
+                  <div className="bg-zinc-100/50 dark:bg-zinc-700/50 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div className="font-medium text-zinc-900 dark:text-white">
                       {resource.access_logs?.find(log => log.count)?.count || 0}
                     </div>
-                    <div className="text-zinc-500 dark:text-zinc-400">{t('resources.chats')}</div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400">{t('resources.chats')}</div>
                   </div>
                 </div>
                 
                 {/* Actions */}
-                <div className="flex justify-between mt-4">
+                <div className="flex justify-between mt-4 pt-4 border-t border-zinc-200/50 dark:border-zinc-700/50">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDownload(resource);
                     }}
-                    className="text-sm flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                    className="text-sm flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                   >
                     <Download className="w-4 h-4 mr-1" />
                     {t('resources.download')}
@@ -615,7 +658,6 @@ export default function ResourcesPage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Create a direct chat handler function that doesn't rely on selectedDocument state
                       const openChatForResource = async (resource: Resource) => {
                         try {
                           await logDocumentAccess(resource.id, 'chat');
@@ -630,11 +672,9 @@ export default function ResourcesPage() {
                           console.error('Error opening chat:', error);
                         }
                       };
-                      
-                      // Call the function directly with this resource
                       openChatForResource(resource);
                     }}
-                    className="text-sm flex items-center text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
+                    className="text-sm flex items-center text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors"
                   >
                     <MessageSquare className="w-4 h-4 mr-1" />
                     {t('resources.chat_with')}
@@ -645,120 +685,126 @@ export default function ResourcesPage() {
                       e.stopPropagation();
                       handleDeleteResource(resource.id);
                     }}
-                    className="text-sm flex items-center text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                    className="text-sm flex items-center text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors"
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
                     {t('resources.delete')}
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))
           )}
-          
-          {/* Selected document details */}
-          <AnimatePresence>
-            {selectedDocument && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="fixed inset-0 z-10 overflow-y-auto"
-                onClick={handleCloseDocument}
-              >
-                <div className="flex items-center justify-center min-h-screen p-4">
-                  <motion.div 
-                    className="bg-white dark:bg-zinc-800 rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-700 w-full max-w-4xl max-h-[90vh] overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                    initial={{ y: 50 }}
-                    animate={{ y: 0 }}
-                  >
-                    <div className="p-6 border-b border-zinc-200 dark:border-zinc-700 flex justify-between items-center">
-                      <div className="flex items-center">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-md">
-                          {getFileIcon(selectedDocument.type)}
-                        </div>
-                        <div className="ml-3">
-                          <h3 className="text-xl font-medium text-zinc-900 dark:text-white">
-                            {selectedDocument.title}
-                          </h3>
-                          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                            {new Date(selectedDocument.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={handleCloseDocument}
-                        className="p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400"
-                      >
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                    
-                    <div className="p-6 max-h-[calc(90vh-11rem)] overflow-y-auto">
-                      {selectedDocument.type === 'image' ? (
-                        <img
-                          src={getFileUrl(selectedDocument.file_path)}
-                          alt={selectedDocument.title}
-                          className="w-full h-auto rounded-lg"
-                        />
-                      ) : selectedDocument.type === 'pdf' ? (
-                        <div className="rounded-lg overflow-hidden shadow-md border border-zinc-200 dark:border-zinc-700 h-[500px]">
-                          <iframe
-                            src={getFileUrl(selectedDocument.file_path)}
-                            className="w-full h-full"
-                            title={selectedDocument.title}
-                          />
-                        </div>
-                      ) : (
-                        <div className="prose dark:prose-invert max-w-none">
-                          <p className="text-zinc-600 dark:text-zinc-400">
-                            {selectedDocument.type === 'document' ? (
-                              <>
-                                {t('resources.document_file')}. 
-                                <button
-                                  onClick={() => handleDownload(selectedDocument)}
-                                  className="ml-2 text-blue-600 dark:text-blue-500 hover:underline"
-                                >
-                                  {t('resources.click_download')}
-                                </button>
-                              </>
-                            ) : (
-                              t('resources.preview_unavailable')
-                            )}
-                          </p>
-                        </div>
-                      )}
-                      
-                      <div className="mt-6">
-                        <button
-                          onClick={handleOpenChat}
-                          className="flex items-center justify-center gap-3 px-6 py-5 w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                        >
-                          <div className="bg-white/20 rounded-full p-2.5">
-                            <MessageSquare className="w-6 h-6" />
-                          </div>
-                          <span className="font-medium text-lg">{t('resources.chat_with_document')}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 
+      {/* Selected document details */}
+      <AnimatePresence>
+        {selectedDocument && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-10 overflow-y-auto"
+            onClick={handleCloseDocument}
+          >
+            <div className="flex items-center justify-center min-h-screen p-4">
+              <motion.div 
+                className="bg-white/90 dark:bg-zinc-900/90 rounded-2xl shadow-2xl border border-zinc-200/50 dark:border-zinc-700/50 w-full max-w-4xl max-h-[90vh] overflow-hidden backdrop-blur-sm"
+                onClick={(e) => e.stopPropagation()}
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 50, opacity: 0 }}
+              >
+                <div className="p-6 border-b border-zinc-200/50 dark:border-zinc-700/50 flex justify-between items-center">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
+                      {getFileIcon(selectedDocument.type)}
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-xl font-medium text-zinc-900 dark:text-white">
+                        {selectedDocument.title}
+                      </h3>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                        {new Date(selectedDocument.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCloseDocument}
+                    className="p-2 rounded-lg hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <div className="p-6 max-h-[calc(90vh-11rem)] overflow-y-auto">
+                  {selectedDocument.type === 'image' ? (
+                    <img
+                      src={getFileUrl(selectedDocument.file_path)}
+                      alt={selectedDocument.title}
+                      className="w-full h-auto rounded-xl shadow-lg"
+                    />
+                  ) : selectedDocument.type === 'pdf' ? (
+                    <div className="rounded-xl overflow-hidden shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 h-[500px]">
+                      <iframe
+                        src={getFileUrl(selectedDocument.file_path)}
+                        className="w-full h-full"
+                        title={selectedDocument.title}
+                      />
+                    </div>
+                  ) : (
+                    <div className="prose dark:prose-invert max-w-none">
+                      <p className="text-zinc-600 dark:text-zinc-400">
+                        {selectedDocument.type === 'document' ? (
+                          <>
+                            {t('resources.document_file')}. 
+                            <button
+                              onClick={() => handleDownload(selectedDocument)}
+                              className="ml-2 text-blue-600 dark:text-blue-500 hover:underline"
+                            >
+                              {t('resources.click_download')}
+                            </button>
+                          </>
+                        ) : (
+                          t('resources.preview_unavailable')
+                        )}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="mt-6">
+                    <button
+                      onClick={handleOpenChat}
+                      className="flex items-center justify-center gap-3 px-6 py-4 w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                    >
+                      <div className="bg-white/20 rounded-full p-2.5">
+                        <MessageSquare className="w-6 h-6" />
+                      </div>
+                      <span className="font-medium text-lg">{t('resources.chat_with_document')}</span>
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Chat Modal */}
       {showChatModal && selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-2 overflow-hidden">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col relative">
-            {/* Close button moved outside header for better visibility */}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 overflow-hidden">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white/90 dark:bg-zinc-900/90 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col relative backdrop-blur-sm"
+          >
+            {/* Close button */}
             <button 
               onClick={handleCloseChatModal}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors z-10"
+              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors z-10"
               aria-label={t('actions.close')}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500 dark:text-zinc-400">
@@ -768,9 +814,9 @@ export default function ResourcesPage() {
             </button>
             
             {/* Header */}
-            <div className="flex items-center p-6 border-b border-zinc-200 dark:border-zinc-800">
+            <div className="flex items-center p-6 border-b border-zinc-200/50 dark:border-zinc-800/50">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
                   {getFileIcon(selectedDocument.type)}
                 </div>
                 <div>
@@ -784,18 +830,18 @@ export default function ResourcesPage() {
               </div>
             </div>
             
-            {/* Chat area with document preview - made responsive */}
+            {/* Chat area with document preview */}
             <div className="flex flex-1 flex-col md:flex-row">
               {/* Document preview */}
-              <div className="w-full md:w-1/2 p-5 border-b md:border-b-0 md:border-r border-zinc-200 dark:border-zinc-800 overflow-y-auto h-[300px] md:h-auto md:max-h-[calc(95vh-140px)] scrollbar-thin scrollbar-thumb-zinc-400 dark:scrollbar-thumb-zinc-600 scrollbar-track-transparent">
+              <div className="w-full md:w-1/2 p-5 border-b md:border-b-0 md:border-r border-zinc-200/50 dark:border-zinc-800/50 overflow-y-auto h-[300px] md:h-auto md:max-h-[calc(95vh-140px)] scrollbar-thin scrollbar-thumb-zinc-400 dark:scrollbar-thumb-zinc-600 scrollbar-track-transparent">
                 {selectedDocument.type === 'image' ? (
                   <img
                     src={getFileUrl(selectedDocument.file_path)}
                     alt={selectedDocument.title}
-                    className="w-full rounded-md shadow-md"
+                    className="w-full rounded-xl shadow-lg"
                   />
                 ) : selectedDocument.type === 'pdf' ? (
-                  <div className="rounded-lg overflow-hidden shadow-md border border-zinc-200 dark:border-zinc-700 h-[500px] md:h-[650px]">
+                  <div className="rounded-xl overflow-hidden shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 h-[500px] md:h-[650px]">
                     <iframe
                       src={getFileUrl(selectedDocument.file_path)}
                       className="w-full h-full"
@@ -803,7 +849,7 @@ export default function ResourcesPage() {
                     />
                   </div>
                 ) : (
-                  <div className="prose dark:prose-invert max-w-none p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+                  <div className="prose dark:prose-invert max-w-none p-4 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-xl backdrop-blur-sm">
                     <p className="text-zinc-600 dark:text-zinc-400">
                       {selectedDocument.type === 'document' ? (
                         <>
@@ -825,7 +871,6 @@ export default function ResourcesPage() {
 
               {/* Chat messages */}
               <div className="w-full md:w-1/2 flex flex-col h-full overflow-hidden">
-                {/* Messages container with fixed height and scrolling */}
                 <div className="flex-1 p-5 overflow-y-auto min-h-[300px] md:min-h-[400px] max-h-[calc(95vh-250px)] md:max-h-[calc(95vh-200px)] scrollbar scrollbar-thin scrollbar-thumb-zinc-400 dark:scrollbar-thumb-zinc-600 scrollbar-track-transparent">
                   {documentChat.messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-zinc-500 dark:text-zinc-400 text-center">
@@ -841,26 +886,28 @@ export default function ResourcesPage() {
                   ) : (
                     <div className="space-y-4 pb-2">
                       {documentChat.messages.map((message, index) => (
-                        <div
+                        <motion.div
                           key={index}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
                           className={`flex ${
                             message.role === 'user' ? 'justify-end' : 'justify-start'
                           }`}
                         >
                           {message.role === 'assistant' && (
-                            <div className="w-10 h-10 flex-shrink-0 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center mr-3 mt-1">
+                            <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-blue-800/20 flex items-center justify-center mr-3 mt-1">
                               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400">
                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                               </svg>
                             </div>
                           )}
                           <div className={`max-w-[85%] flex flex-col ${message.isLoading ? 'animate-pulse' : ''}`}>
-                            {/* Message content */}
                             <div
                               className={`p-4 rounded-xl shadow-sm ${
                                 message.role === 'user'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                                  ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white'
+                                  : 'bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-800 dark:to-zinc-700 text-zinc-900 dark:text-white'
                               }`}
                             >
                               {message.isLoading ? (
@@ -871,13 +918,11 @@ export default function ResourcesPage() {
                                 </div>
                               ) : (
                                 <div className="whitespace-pre-wrap text-base prose dark:prose-invert max-w-none">
-                                  {/* Render message content with special formatting */}
                                   {renderFormattedContent(message.content)}
                                 </div>
                               )}
                             </div>
                             
-                            {/* Timestamp */}
                             <div className={`text-xs mt-1 ${
                               message.role === 'user' ? 'text-right text-zinc-500 dark:text-zinc-400' : 'text-left text-zinc-500 dark:text-zinc-400'
                             }`}>
@@ -886,22 +931,22 @@ export default function ResourcesPage() {
                           </div>
                           
                           {message.role === 'user' && (
-                            <div className="w-10 h-10 flex-shrink-0 rounded-full bg-blue-600 flex items-center justify-center ml-3 mt-1">
+                            <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center ml-3 mt-1">
                               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                 <circle cx="12" cy="7" r="4"></circle>
                               </svg>
                             </div>
                           )}
-                        </div>
+                        </motion.div>
                       ))}
-                      <div ref={chatEndRef} className="h-4" id="chat-end"></div> {/* Adds a bit of space at the bottom */}
+                      <div ref={chatEndRef} className="h-4" id="chat-end"></div>
                     </div>
                   )}
                 </div>
 
                 {/* Input area */}
-                <div className="p-5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex-shrink-0">
+                <div className="p-5 border-t border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm flex-shrink-0">
                   <div className="flex items-center gap-3">
                     <input
                       type="text"
@@ -914,12 +959,12 @@ export default function ResourcesPage() {
                         }
                       }}
                       placeholder={t('resources.ask_about')}
-                      className="flex-1 px-5 py-4 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-base"
+                      className="flex-1 px-5 py-4 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50 bg-white/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all text-base"
                     />
                     <button
                       onClick={handleSendMessage}
                       disabled={!userMessage.trim() || documentChat.messages.some(m => m.isLoading)}
-                      className={`p-4 rounded-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white transition-colors`}
+                      className={`p-4 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all`}
                     >
                       {documentChat.messages.some(m => m.isLoading) ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -934,7 +979,7 @@ export default function ResourcesPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
