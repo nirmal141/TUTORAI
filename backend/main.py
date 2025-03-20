@@ -28,9 +28,9 @@ from youtube_transcript_api import YouTubeTranscriptApi
 import asyncio
 import re
 
-# from pinecone import Pinecone
+from pinecone import Pinecone
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings  # Change this if using a different embedding model
+from langchain_community.embeddings import OpenAIEmbeddings
 from openai import OpenAI
 
 
@@ -101,11 +101,11 @@ LM_STUDIO_HEADERS = {
 }
 
 # Initialize pinecone
-# pc = Pinecone(
-#     api_key=os.getenv("PINECONE_API_KEY")
-# )
-# index = pc.Index(os.getenv("INDEX_NAME"))
-# embedder = OpenAIEmbeddings()
+pc = Pinecone(
+    api_key=os.getenv("PINECONE_API_KEY")
+)
+index = pc.Index(os.getenv("INDEX_NAME"))
+embedder = OpenAIEmbeddings()
 
 async def get_web_search_results(query: str, professor: dict, num_results: int = 5):
     try:
@@ -293,7 +293,12 @@ def process_lecture_formatting(response_text: str) -> dict:
         "has_equation": False,
         "has_example": False,
         "has_diagram": False,
-        "has_references": False
+        "has_references": False,
+        "has_sections": False,
+        "has_key_points": False,
+        "has_emojis": False,
+        "has_tables": False,
+        "has_ascii_art": False
     }
     
     formatted_text = response_text
@@ -309,11 +314,38 @@ def process_lecture_formatting(response_text: str) -> dict:
     # Detect examples 
     example_patterns = [
         r"(?i)example[s]?:", r"(?i)for example,", 
-        r"(?i)let's consider", r"(?i)consider this example"
+        r"(?i)let's consider", r"(?i)consider this example",
+        r"### Example", r"\*\*Example\*\*"
     ]
     for pattern in example_patterns:
         if re.search(pattern, formatted_text):
             lecture_components["has_example"] = True
+            break
+    
+    # Detect sections (markdown headings)
+    if re.search(r"###\s+\w+", formatted_text):
+        lecture_components["has_sections"] = True
+    
+    # Detect key points (blockquotes)
+    if re.search(r">\s+", formatted_text):
+        lecture_components["has_key_points"] = True
+    
+    # Detect emojis
+    if re.search(r"[\U0001F300-\U0001F9FF]", formatted_text):
+        lecture_components["has_emojis"] = True
+    
+    # Detect tables (markdown tables)
+    if re.search(r"\|.*\|.*\|", formatted_text):
+        lecture_components["has_tables"] = True
+    
+    # Detect ASCII art
+    ascii_art_patterns = [
+        r"```ascii", r"```art",
+        r"[\/\\\|\-\+\=]{4,}"  # Simple pattern for ASCII art lines
+    ]
+    for pattern in ascii_art_patterns:
+        if re.search(pattern, formatted_text):
+            lecture_components["has_ascii_art"] = True
             break
     
     # Detect diagrams
@@ -327,13 +359,49 @@ def process_lecture_formatting(response_text: str) -> dict:
     if re.search(r"\[\d+\]|\[Source \d+\]", formatted_text) or "according to" in formatted_text.lower():
         lecture_components["has_references"] = True
     
-    # Format whiteboard-style content more prominently
-    # This just adds some metadata, frontend can style it appropriately
-    
     return {
         "formatted_text": formatted_text,
         "lecture_components": lecture_components
     }
+
+async def get_relevant_lecture_content(query: str, professor: Professor, top_k: int = 3):
+    """Get relevant lecture content from professor-specific lectures."""
+    try:
+        # Only use RAG for specific professors who have their content indexed
+        professor_indices = {
+            "Andrew Ng": "andrew-ng",  # Index name for Andrew Ng's lectures
+            # Add more professors and their indices as they are added
+            # "Yann LeCun": "yann-lecun",  # Example for future expansion
+            # "David Malan": "david-malan",
+        }
+        
+        # Check if this professor has indexed content
+        if professor.name not in professor_indices:
+            return ""
+            
+        # Get the correct index for this professor
+        professor_index = pc.Index(professor_indices[professor.name])
+        
+        # Create embedding for the query
+        query_embedding = embedder.embed_query(query)
+        
+        # Search Pinecone
+        search_results = professor_index.query(
+            vector=query_embedding,
+            top_k=top_k,
+            include_metadata=True
+        )
+        
+        # Format results
+        context = f"Relevant content from Professor {professor.name}'s lectures:\n\n"
+        for i, match in enumerate(search_results['matches'], 1):
+            if match['score'] > 0.7:  # Only include highly relevant matches
+                context += f"[Lecture Extract {i}]: {match['metadata']['text']}\n\n"
+        
+        return context
+    except Exception as e:
+        print(f"Error getting lecture content: {str(e)}")
+        return ""
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
@@ -389,33 +457,44 @@ SUBJECT EXPERTISE:
 - You cite relevant scholars or research when appropriate
 
 RESPONSE FORMAT:
-- Address the student directly as if speaking in a classroom
-- Use classroom language like "As we discussed earlier...", "Let's explore this concept...", or "If you look at the board..."
-- For equations or diagrams, use markdown formatting as if writing on a board
-- Include brief pauses or transitions between explanations as you would in a lecture
-- If appropriate for the question, structure your response as: 1) acknowledge the question, 2) provide context, 3) explain the concept, 4) give examples, 5) check understanding
+1. Use clear markdown formatting:
+   - Use ### for main section headings
+   - Use bold (**text**) for important concepts
+   - Use bullet points for lists
+   - Use numbered lists for steps or sequences
+   - Use code blocks (```) for technical content or equations
+   - Use > for important quotes or key takeaways
+   - Use horizontal rules (---) to separate major sections
+
+2. Structure your responses with:
+   - A brief acknowledgment of the question
+   - Clear section headings for different parts of your answer
+   - Examples and analogies in separate, clearly marked sections
+   - Key takeaways or summary points at the end
+   - Follow-up questions or suggested areas for exploration
+
+3. Visual elements:
+   - Use emojis sparingly but effectively (e.g., 📝 for notes, 💡 for insights)
+   - Format equations and mathematical concepts clearly using LaTeX when needed
+   - Use tables for comparing concepts where appropriate
+   - Include ASCII diagrams if helpful
+
+4. Language style:
+   - Use clear, concise language
+   - Break down complex ideas into digestible parts
+   - Include brief "checkpoints" to ensure understanding
+   - End with thought-provoking questions or next steps
 
 ADVICE SPECIALIZATION:
 You specialize in providing {request.professor.adviceType} to students.
 """
+
+        # Get relevant lecture content only for professors with indexed content
+        lecture_context = await get_relevant_lecture_content(request.message, request.professor)
         
-        # Add thinking instructions only for local models
-        if request.model_type == "local":
-            system_message = f"""{base_system_message}
+        if lecture_context:
+            base_system_message += f"\n\nRELEVANT LECTURE CONTENT:\n{lecture_context}\n\nUse this lecture content to inform your response, but maintain your teaching style and explain concepts in your own words."
 
-Please show your reasoning and thinking process before providing your final answer. 
-Structure your response in this format:
-
-<think>
-[Your step-by-step reasoning and thought process goes here. Include any considerations, evaluations of different approaches, or background knowledge you're applying. This helps the student understand how an expert approaches this type of problem.]
-</think>
-
-[Your final, polished classroom response goes here without the thinking process. This should be a clear, instructive response as if speaking directly to students in your classroom.]
-"""
-        else:
-            # For OpenAI models, use the enhanced base message without thinking instructions
-            system_message = base_system_message
-        
         # If web search is enabled, perform specialized academic search
         search_context = ""
         search_results = []
@@ -451,7 +530,7 @@ Structure your response in this format:
                 if request.model_type == "local":
                     search_system_message += "\n\nRemember to include your thinking in <think> tags before your final classroom response."
                 
-                system_message += "\n\n" + search_system_message
+                base_system_message += "\n\n" + search_system_message
 
         # Update knowledge graph with professor data
         
@@ -465,7 +544,7 @@ Structure your response in this format:
                 
                 payload = {
                     "messages": [
-                        {"role": "system", "content": system_message},
+                        {"role": "system", "content": base_system_message},
                         {"role": "user", "content": request.message}
                     ],
                     "temperature": 0.7,
@@ -517,7 +596,7 @@ Structure your response in this format:
         elif request.model_type == "openai":
             try:
                 messages = [
-                    {"role": "system", "content": system_message},
+                    {"role": "system", "content": base_system_message},
                     {"role": "user", "content": request.message}
                 ]
                 

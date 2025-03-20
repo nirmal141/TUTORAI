@@ -1,6 +1,6 @@
 import os
 from pinecone import Pinecone
-from langchain.embeddings import OpenAIEmbeddings 
+from langchain_community.embeddings import OpenAIEmbeddings 
 import PyPDF2
 from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
