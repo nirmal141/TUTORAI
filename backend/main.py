@@ -38,6 +38,11 @@ load_dotenv()
 
 app = FastAPI()
 
+@app.get("/")
+async def root():
+    """Health check endpoint."""
+    return {"status": "ok", "message": "TutorAI API is running"}
+
 # More specific CORS configuration
 origins = [
     "http://localhost:3173",    # Vite's default dev server
