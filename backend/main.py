@@ -30,7 +30,7 @@ import re
 
 from pinecone import Pinecone
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 
 
@@ -48,13 +48,11 @@ origins = [
     "http://127.0.0.1:5173",
     "https://tutorai.vercel.app",  # Production URL
     "https://tutorai-git-main-your-username.vercel.app",  # Preview deployments
-    "https://*.vercel.app"  # Allow all Vercel preview deployments
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex="https?://.*",  # More permissive for deployment
+    allow_origins=["*"],  # Allow all origins for now
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods
     allow_headers=["*"],
