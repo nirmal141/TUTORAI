@@ -46,14 +46,17 @@ origins = [
     "http://127.0.0.1:3000",
     "http://localhost:5173",    # Vite's actual default port
     "http://127.0.0.1:5173",
+    "https://tutorai.vercel.app",  # Production URL
+    "https://tutorai-git-main-your-username.vercel.app",  # Preview deployments
+    "https://*.vercel.app"  # Allow all Vercel preview deployments
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex="https?://localhost:.*",  # Allow any localhost port
+    allow_origin_regex="https?://.*",  # More permissive for deployment
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["*"],  # Allow all methods
     allow_headers=["*"],
     max_age=86400,  # Cache preflight requests for 24 hours
 )
