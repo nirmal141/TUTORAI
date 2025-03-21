@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, X, Upload, ExternalLink, CornerDownLeft } from 'lucide-react';
 import { Button } from './ui/button';
+import API_ENDPOINTS from '../config/api';
 
 interface Document {
   document_id: string;
@@ -38,7 +39,7 @@ export default function DocumentsPanel({
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('http://localhost:8000/api/documents');
+      const response = await fetch(API_ENDPOINTS.DOCUMENTS);
       
       if (!response.ok) {
         throw new Error('Failed to fetch documents');

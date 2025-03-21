@@ -5,6 +5,7 @@ import { uploadFile, deleteDocument, getFileUrl, listDocuments, logDocumentAcces
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/lib/language-context';
 import type { Document, DocumentType, SubjectType, Profile } from '@/lib/supabase';
+import API_ENDPOINTS from '../config/api';
 
 interface Resource extends Document {
   access_logs?: {
@@ -353,7 +354,7 @@ export default function ResourcesPage() {
       console.log('Processing document chat for URL:', documentUrl);
 
       // Call backend API
-      const response = await fetch('http://localhost:8000/api/document-chat', {
+      const response = await fetch(API_ENDPOINTS.DOCUMENT_CHAT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
